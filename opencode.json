@@ -1,0 +1,31 @@
+{
+    "mcp":  {
+                "ssh":  {
+                            "type":  "local",
+                            "command":  [
+                                            "node",
+                                            "G:/www/dsh-base/.agents/mcps/ssh-runner/bin/run-ssh-mcp.cjs",
+                                            "--project",
+                                            "G:/www/dsh-base"
+                                        ],
+                            "enabled":  true
+                        }
+            },
+    "permission":  {
+                       "read":  {
+                                    "*":  "allow",
+                                    "*.secrets*":  "deny"
+                                },
+                       "grep":  {
+                                    "*":  "allow",
+                                    "*ssh_password*":  "deny",
+                                    "*ssh_key_path*":  "deny"
+                                },
+                       "bash":  {
+                                    "*":  "allow",
+                                    "*.secrets*":  "deny",
+                                    "*ssh_password*":  "deny",
+                                    "*Win32_Process*":  "deny"
+                                }
+                   }
+}

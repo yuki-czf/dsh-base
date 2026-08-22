@@ -1,0 +1,13 @@
+{
+  "name": "@dsh/ssh-mcp-runner",
+  "version": "0.2.0",
+  "private": true,
+  "description": "Cross-client SSH MCP runner: merges credentials from .secrets with an auditable policy.json, spawns the SSH MCP server with zero credential exposure in argv or client configs.",
+  "license": "UNLICENSED",
+  "bin": {
+    "dsh-ssh-mcp": "bin/run-ssh-mcp.cjs"
+  },
+  "dependencies": {
+    "@fangjunjie/ssh-mcp-server": "1.9.0"
+  }
+}

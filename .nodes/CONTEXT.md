@@ -5,23 +5,27 @@
 
 ## 项目一句话
 
-{一段话说清这个项目是什么、给谁用、当前处于什么阶段}
+dsh-base：AI Agent 基础设施孵化仓（skill / MCP / 插件），已产出 node-architect v1.2.0 与 mcp-ssh-runner v0.2.0（跨客户端 SSH MCP 统一源，凭据平文件隔离），remote-install.ps1 已泛化为多模块云端分发入口。
 
 ## 当前节点
 
-- **节点**：{名称}
-- **验收标准**：{怎样算完成}
-- **状态**：待开始 | 进行中 | 待验收 | 已完成
+- **节点**：#4 云端分发入口：remote-install 泛化多模块
+- **验收标准**：-Module 路由向后兼容 / -ZipPath 离线 / 本地 zip 双模块模拟测试 / README 命令
+- **状态**：已完成（2026-08-22，详见 archive/云端分发入口：remote-install 泛化多模块.md）
 - **下一步**（下个节点怎么做的设计要点，开工前敲定）：
-  {接口 / 数据结构 / 步骤 / 风险，三五条以内}
+  - 节点 #2 dsh-mcp skill：AI 纪律层（禁读 .secrets、排障/升级走 installer、凭据泄露自查）
+  - **git 推送**：mcps/、research/、opencode.json、remote-install.ps1、.nodes 变更均未提交——云端安装真实可用前提
+  - 推送后冒烟：真实 `irm` 路径装一次 ssh-runner 到临时项目
+  - 遗留：cursor/zed/claude 三端真机回归；多客户端并发（MaxSessions）候选节点
 
 ## 活跃会话
 
 | 会话 | 负责 | 更新时间 |
 |---|---|---|
-| {会话标识} | {在做的事} | {时间} |
+| opencode-main | 节点 #1/#3/#4 已存档，待命 | 2026-08-22 |
 
 ## 关键路径提醒
 
-- {依赖、风险、千万别忘的事}
-
+- 云端一行式（ssh-runner）：`& ([scriptblock]::Create((irm https://raw.githubusercontent.com/yuki-czf/dsh-base/main/remote-install.ps1))) -Module ssh-runner`
+- 凭据在 `.secrets/` 平文件（gitignore + ACL）；AI 会话禁读 `.secrets/` 任何文件；分发包/测试 zip 永远排除 `.secrets/`
+- PS1 必须 UTF-8 BOM；新模块云端化 = moduleMap 登记一行 + README 补命令

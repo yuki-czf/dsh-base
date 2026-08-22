@@ -4,17 +4,27 @@
 
 ---
 
-## ☁️ 云端一键安装 node-architect（推荐）
+## ☁️ 云端一键安装（推荐）
 
 在**任意项目根目录**打开 PowerShell，一行命令直装（零凭据、零依赖，仅需 Windows + PowerShell 5.1）：
+
+### node-architect（节点协议 skill）
 
 ```powershell
 irm https://raw.githubusercontent.com/yuki-czf/dsh-base/main/remote-install.ps1 | iex
 ```
 
+### ssh-runner（跨客户端 SSH MCP，另需 node/npm）
+
+```powershell
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/yuki-czf/dsh-base/main/remote-install.ps1))) -Module ssh-runner
+```
+
+可选参数（下载后运行或用 scriptblock 传参）：`-Project <路径>`、`-Clients opencode,cursor,zed,claude`、`-Branch <分支>`；离线/内网可用 `-ZipPath <仓库zip>`。
+
 或在 AI 客户端会话中直接说：
 
-> 帮我安装 `github.com/yuki-czf/dsh-base` 仓库里的 node-architect skill
+> 帮我安装 `github.com/yuki-czf/dsh-base` 仓库里的 node-architect skill / ssh-runner MCP
 
 > ⚠️ 版权提示：本仓库未附开源 License，代码公开仅便于本人跨设备安装使用，保留所有权利，未授权请勿使用/分发。
 

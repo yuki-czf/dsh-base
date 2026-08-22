@@ -27,3 +27,5 @@ yarn-error.log*
 .opencode/skills/node-architect/
 .nodes/.lock
 .agents/backup/
+.secrets/
+.agents/mcps/*/node_modules/
