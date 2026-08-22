@@ -44,3 +44,10 @@
 - **理由**：云端层只负责"送母版到目标机器"，落装逻辑各模块 install.ps1 自持（已验证幂等）；新增模块只需 moduleMap 加一行。ZipPath 同时解决内网分发与无法推送时的本地端到端测试。
 - **影响**：remote-install.ps1（注意保持 UTF-8 BOM）；dsh-base README、mcps/ssh-runner README 安装说明；真实云端可用性依赖 git 推送（mcps/ 等尚未提交）。
 
+## [2026-08-22] 入口脚本编码铁律：remote-install.ps1 必须纯 ASCII 无 BOM
+
+- **背景**：节点 #4 提交时给 remote-install.ps1 加了 UTF-8 BOM（沿用 install.ps1 的本地 -File 安全经验），推送后真实冒烟失败：`irm | iex` 与 `[scriptblock]::Create` 都因字符串开头的 \uFEFF（65279）字符解析报错。
+- **决定**：入口脚本（会被当作字符串经网络管道消费的脚本）必须**纯 ASCII 且无 BOM**；中文+BFOM 仅限只作为文件执行的内层 installer（install.ps1 等）。文件头注释已写明此约束防止回归。
+- **理由**：三条通道的编码要求互斥——本地 PS 5.1 -File 读无 BOM 中文文件按 ANSI 误解析（要 BOM），而 irm 返回的字符串会保留 BOM 字符且 PowerShell 解析器不吃它（要无 BOM）。纯 ASCII 是唯一同时安全的组合。
+- **影响**：remote-install.ps1（fix commit 1f48925）；排障知识：raw.githubusercontent.com 的 fastly CDN 缓存约 5 分钟，改完立即测会用旧版，可用 GitHub contents API（base64 解码）即时验证 blob 真相。
+
