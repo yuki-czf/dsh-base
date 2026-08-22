@@ -23,3 +23,7 @@ yarn-error.log*
 .env
 .env.local
 .env.*.local
+# node-architect 生成的联接镜像（clone 后重跑 install.ps1 重建）
+.opencode/skills/node-architect/
+.nodes/.lock
+.agents/backup/

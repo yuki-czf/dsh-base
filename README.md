@@ -4,6 +4,22 @@
 
 ---
 
+## ☁️ 云端一键安装 node-architect（推荐）
+
+在**任意项目根目录**打开 PowerShell，一行命令直装（零凭据、零依赖，仅需 Windows + PowerShell 5.1）：
+
+```powershell
+irm https://raw.githubusercontent.com/yuki-czf/dsh-base/main/remote-install.ps1 | iex
+```
+
+或在 AI 客户端会话中直接说：
+
+> 帮我安装 `github.com/yuki-czf/dsh-base` 仓库里的 node-architect skill
+
+> ⚠️ 版权提示：本仓库未附开源 License，代码公开仅便于本人跨设备安装使用，保留所有权利，未授权请勿使用/分发。
+
+---
+
 ## 🎯 项目定位与阶段规划
 
 本项目处于前期探索与原型孵化阶段，核心任务涵盖前沿调研、协议设计与工具链落地。
