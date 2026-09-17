@@ -62,7 +62,7 @@ dsh-base/
 ├── plugins/                    # [规划] 多客户端插件与桥接代码
 ├── research/                   # [规划] 调研报告、技术方案选型与评测
 ├── dist/                       # 打包产物与离线发布包
-│   └── node-architect-v1.2.0.zip
+│   └── dist/node-architect-v1.4.1.zip
 └── README.md                   # 项目总览
 ```
 
@@ -70,16 +70,16 @@ dsh-base/
 
 ## 📦 现有基础资产
 
-### `node-architect-v1.2.0.zip` (节点架构师安装包)
+### `dist/node-architect-v1.4.1.zip` (节点架构师安装包)
 已验证并打包的通用节点协议开发基座，主要特性：
 - **核心理念**：*文件是记忆，对话不是* —— 设计先行 → 节点推进 → 落盘存档 → 换窗口无缝续接。
 - **架构机制**：唯一真源（`.agents/skills/node-architect`）+ 客户端联接镜像（Junction），一次更新全端同步。
-- **内置工具**：`install.ps1`（自动探测多客户端并建联）、`save.ps1`（存档写锁与完整性校验）。
+- **内置工具**：`install.ps1`（自动探测多客户端并建联）、`save.ps1`（存档锁/校验/一键存档 `save`/批次 `commit`/决策归档 `trim-decisions`）、`save.mjs`（Node.js 跨平台版）。
 
 #### 快速解压与使用
 ```powershell
 # 解压到当前目录
-Expand-Archive -Path ".\node-architect-v1.2.0.zip" -DestinationPath ".\"
+Expand-Archive -Path ".\dist\node-architect-v1.4.1.zip" -DestinationPath ".\"
 
 # 一次性全局引导（让所有 AI 客户端识别"装节点协议"）
 powershell -ExecutionPolicy Bypass -File .\node-architect\install.ps1 -Bootstrap

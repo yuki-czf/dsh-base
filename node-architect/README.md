@@ -26,7 +26,7 @@ agent 打开本目录读到 `AGENTS.md`，就会在项目根执行 `install.ps1`
 真源若被本地改过，覆盖前自动备份到 `.agents\backup\`（重跑不丢改动）。
 不支持联接的场景（exFAT/网络盘/故意要提交镜像）加 `-Copy` 用拷贝镜像。
 
-存档的机械动作由 `skill\scripts\save.ps1` 承担：`lock` / `unlock`（CONTEXT 写锁，10 分钟超时）、`verify`（五步存档完整性校验，归档骨架自动生成）。
+存档的机械动作由 `skill\scripts\save.ps1` 承担：`lock` / `unlock`（CONTEXT 写锁，目录锁原子创建，10 分钟超时）、`verify`（存档完整性校验，归档骨架自动生成）、`verify-batch`（批末收口校验）、`save`（lock→CONTEXT 原子替换→unlock→verify 单命令，常规存档用）、`commit`（同前但收口走 verify-batch，批次场景用）、`trim-decisions`（DECISIONS.md 超 200 行时归档旧段）、`check-tombstone`（压缩后漏补存档检测）。无 PowerShell 的环境用跨平台版 `skill\scripts\save.mjs`（Node.js，功能对等）。命令速查见 `skill\references\QUICKREF.md`。大节点超上下文预算时拆批执行：先按**询问制**向用户二选一（spec-superflow 重型 / 本分批约定轻量，不混用），选定后在 `.nodes\plans\<节点名>.md` 落批次计划，每批一个全新会话，批末固定走 `commit` 收口（详见 `skill\references\PROTOCOL.md`「批次协议」节）。DSH Desktop 端的批末派生由 `skill\scripts\derive-next-batch.ps1` 承担：直调本地 web API 自动开出下一批会话（batch-executor preset + 公司 vLLM Qwen3.8-27B-W4A16-AWQ），前置 = DSH 设置开启「允许在浏览器中打开」（仅本机/loopback）；脚本报错自动回退手动链。
 
 ## 一次性引导：让"装节点协议"四个字生效
 
@@ -55,6 +55,10 @@ powershell -ExecutionPolicy Bypass -File <母版路径>\install.ps1 -Project D:\
 显式 `-Clients` 与自动探测取并集。
 
 选项：`-Copy` 拷贝镜像｜`-SkipNodes` 不初始化档案｜重复运行安全（幂等，兼作"重建联接"）。
+
+## 大节点拆批执行（分批约定）
+
+节点超出单会话上下文预算时：登记时按**询问制**二选一（spec-superflow 重型 / 本分批约定轻量，不混用）；选本约定则在项目 `.nodes\plans\<节点名>.md` 落批次计划（六列表：批/名称/范围/验收/材料K/前置），一批 = 一个新会话，批末用 `save.ps1 commit` 原子收口（内含 verify-batch 校验）。opencode 用户另可装全局 agent `batch-executor`（`install.ps1 -BatchAgent`）获得"读档→执行本批→批末存档→停"的免教派执行员。协议全文见 `.nodes\PROTOCOL.md`「批次协议」节。
 
 ## 打包分发 / 换电脑
 

@@ -15,6 +15,6 @@
 装完后的验收：
 1. 确认目标项目出现 `.agents\skills\node-architect\SKILL.md`、`.nodes\CONTEXT.md`、`AGENTS.md`
 2. 读 `.nodes\CONTEXT.md` 与 `.nodes\PROGRESS.md`，向用户复述"当前节点 / 下一步"
-3. 之后遵守项目 `AGENTS.md` 的节点协议铁律；用户说"存档"时按 `.nodes\PROTOCOL.md` 执行五步存档
+3. 之后遵守项目 `AGENTS.md` 的节点协议铁律；用户说"存档"时按 `.nodes\PROTOCOL.md` 执行存档（机械动作走 `skill/scripts/save.ps1 save`，无 PowerShell 用 `save.mjs`）；大节点拆批执行走「批次协议」（PROGRESS 状态 `进行中·批N/M`，立节点先按询问制二选一不混用，批末 `save.ps1 commit` 原子收口、内含 verify-batch 校验）
 
 可选参数（仅特殊场景）：`-Copy`（联接不可用时用拷贝镜像）、`-SkipNodes`（只装 skill）、`-Clients opencode,zcode`（显式指定客户端镜像）。

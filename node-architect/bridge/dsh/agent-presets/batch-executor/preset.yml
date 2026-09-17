@@ -1,0 +1,7 @@
+name: batch-executor 分批执行员〔必须选公司vLLM-Qwen3.8〕
+description: >-
+  node-architect 分批约定的执行器：一批=一个新会话，读档定位当前批、只执行该批、
+  commit 原子收口后即停，禁并行禁跨批。用于项目根有 .nodes/ 的分批节点执行。
+  自动派生（derive-next-batch.ps1）开的会话已自动选好「公司大模型(vLLM) / Qwen3.8-27B-W4A16-AWQ」。
+  ⚠ 手动新建会话时 preset 不约束模型：请务必手动选「公司大模型(vLLM) / Qwen3.8-27B-W4A16-AWQ」。
+  选错模型（如 nemotron/glm）将没有分批纪律保护——实测会无视全部纪律当普通助手用。

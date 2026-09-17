@@ -1,6 +1,6 @@
 ---
 name: node-architect
-version: 1.2.0
+version: 1.4.1
 description: 长项目节点存档与恢复协议。项目根存在 .nodes/ 时必须启用：会话开工先读档恢复全貌，节点完成、用户要求存档或大改动落地时写存档。也用于用户说"初始化节点协议、存档、恢复进度、开新节点"时。
 whenToUse: 项目根存在 .nodes/ 目录；或用户要求建立节点化项目管理、执行存档、恢复进度。
 ---
@@ -14,43 +14,43 @@ whenToUse: 项目根存在 .nodes/ 目录；或用户要求建立节点化项目
 1. **开工必读档**：项目根有 `.nodes/` → 动手前先读 `CONTEXT.md` 和 `PROGRESS.md`；对决策有疑问再读 `DECISIONS.md` 最近条目。读完用一两句话向用户复述"当前节点 / 下一步"，确认后再动手。
 2. **节点先行**：任何长于一次会话的工作，先在 `PROGRESS.md` 登记节点（名称 + 验收标准 + owner 会话），并把下一步的设计要点写入 `CONTEXT.md` 的"下一步"，再写代码。地图先于道路。
 3. **必须存档的时机**：① 节点验收标准达成；② 用户表达存档意向（"存档 / 这节点差不多了 / 先到这"）；③ 完成大结构改动；④ 出现会话即将结束的迹象。存档走【存档流程】。
-4. **体积纪律**：`CONTEXT.md` 永远保持一屏以内；细节写入 `archive/<节点>.md`；`DECISIONS.md` 超过 200 行时把旧段剪切到 `archive/decisions-<日期>.md`。
+4. **体积纪律**：`CONTEXT.md` 永远保持一屏以内；细节写入 `archive/<节点>.md`；`DECISIONS.md` 超过 200 行时跑 `save.ps1 trim-decisions` 归档旧段。
 5. **发现即恢复**：感知到上下文被压缩（出现摘要标记、记忆断裂）→ 立即重读 `CONTEXT.md`、`PROGRESS.md` 和本会话的 `SESSIONS/` 文件，再继续工作。
 
 ## 节点定义
 
-节点 = **一个可验收的交付物**（"跑通登录流程"），不是任务清单（"写三个函数"）。
-边界由你提议、用户一句话确认。
+节点 = **一个可验收的交付物**（"跑通登录流程"），不是任务清单（"写三个函数"）。边界由你提议、用户一句话确认。
 
-与其他机制的分工：todo = 会话内步骤（活不过压缩）；goal = 跨轮目标锚；
-**节点 = 项目级存档单元（活在磁盘上）**。一个节点 ≈ 一个 goal 的完整交付。
+与其他机制的分工：todo = 会话内步骤（活不过压缩）；goal = 跨轮目标锚；**节点 = 项目级存档单元（活在磁盘上）**。
+
+状态：待开始 / 进行中 / 待验收 / 已完成 / 已归档 / 已废弃
 
 ## 存档流程（checkpoint）
 
-机械动作（锁 / 超时判断 / 校验 / 归档骨架）交给 `scripts/save.ps1`，你只负责生成内容。按顺序执行，末步 `verify` 全过才算存档：
+按顺序执行；**完成字样时序**：verify 全 [OK] 之前，任何档案不得写入"已完成"类表述。
 
-1. **PROGRESS.md**：定向 edit 该节点所在行（状态、更新时间）。
-2. **SESSIONS/<本会话标识>.md**：整文件重写本会话状态（进行中 / 暂停点 / 未决问题）。会话标识取简短稳定名（如 main、exp-1），首次写入时在 `CONTEXT.md` 活跃会话表登记。
-3. **DECISIONS.md**：本节点产生了决策时，在文件末尾**追加**一条，永不改写历史条目。
-4. **CONTEXT.md**：先 `scripts/save.ps1 lock -Session <会话标识>` 取锁 → 全文重写快照（当前节点 / 下一步 / 活跃会话 / 关键路径，头部"最后更新"改为今日）→ 立即 `scripts/save.ps1 unlock -Session <会话标识>` 放锁。取锁失败（他人持新锁）→ 先做第 5 步稍后重试。
-5. **archive/<节点名>.md**：节点完成时按 `archive/_template.md` 结构填写归档（改动清单 / 踩坑 / 遗留 / 给下个节点的衔接说明）。
-6. **校验收口**：`scripts/save.ps1 verify -Node <节点名> -Session <会话标识> [-Completed]`——清单必须全 [OK]（退出码 0）；有 [FAIL] 按提示补齐后重跑。归档文件缺失时 verify 自动从模板生成骨架。
+1. **PROGRESS.md**：定向 edit 该节点行（状态、更新时间）
+2. **SESSIONS/<会话>.md**：重写本会话状态
+3. **DECISIONS.md**：有决策则末尾追加（永不改旧）
+4. **CONTEXT.md**：写暂存文件 → 调 `save.ps1 save`（自动 lock→替换→unlock→verify）
+5. **archive/<节点名>.md**：节点完成时按模板填写归档
 
-## 并发安全规则（多会话同时工作时）
+命令速查与参数详见 `references/QUICKREF.md`。批次场景用 `save.ps1 commit` 替代 `save`。
 
-- `DECISIONS.md` **只追加**；`PROGRESS.md` **只改自己拥有节点的行**；`SESSIONS/` **每会话一文件，只写自己的**。
-- 写 `CONTEXT.md` 前后用 `scripts/save.ps1 lock / unlock -Session <会话标识>`（锁文件 `.nodes/.lock` = 会话标识 + 时间戳，10 分钟超时；持有者校验与超时覆盖由脚本处理）。
-- 拿到过期锁或发现其他会话刚写过 → **重读最新内容再合并**，绝不盲目覆盖。
+## 并发安全
 
-## 初始化（项目还没有 .nodes/ 时）
+- `DECISIONS.md` **只追加**；`PROGRESS.md` **只改自己节点的行**；`SESSIONS/` **只写自己的**。
+- `CONTEXT.md` 写入通过 save/commit 命令自动加锁，无需手动 lock/unlock。
+- 冲突时重读合并，绝不盲目覆盖。
 
-用户说"初始化节点协议"，或你判断这是长项目且用户同意时：
+## 初始化
 
-1. 运行本 skill 的 `scripts/init-nodes.ps1 -Project <项目根>`（脚本位于 skill 目录下，相对本文件为 `scripts/init-nodes.ps1`）。
-2. 初始化后回到【铁律 1】执行开工读档。
+用户说"初始化节点协议"时：运行 `scripts/init-nodes.ps1 [-Project <项目根>]`，然后回到铁律 1 读档。
 
-## 跨客户端
+## 需要分批？
 
-`AGENTS.md` 中的指针会引导非 DSH 客户端读取 `.nodes/PROTOCOL.md`（客户端无关的协议全文）。保持该指针存在且有效；协议升级时同步更新 `.nodes/PROTOCOL.md`。
+预判超单会话上下文预算 → 先问用户选 **spec-superflow**（重型）还是**本分批约定**（轻量），二选一不混用。执行纪律与命令详见 `.nodes/PROTOCOL.md`「批次协议」节和 `references/QUICKREF.md`。
 
-**规则真源与版本**：协议规则以 `.nodes/PROTOCOL.md` 为准（版本号见其头部，与 skill frontmatter `version:` 同源）；本文件与 AGENTS.md 指针为摘要，出现分歧以协议为准。升级流程：改母版 `node-architect\skill\` → 重跑 `install.ps1` 同步（真源若被本地改过，覆盖前自动备份到 `.agents\backup\`）。
+## 规则真源
+
+协议全文以 `.nodes/PROTOCOL.md` 为准（版本号与本 frontmatter 同源）。`AGENTS.md` 为跨客户端指针摘要，分歧以 PROTOCOL 为准。

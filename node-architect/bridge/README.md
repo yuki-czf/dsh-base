@@ -58,3 +58,10 @@ pwsh -File node-architect\install.ps1 -Bridge
 - 语义存档（"这次做了什么"）机械钩子无法自行提炼——它只存在于即将压缩的对话里。主线方案让**摘要无损携带增量**、压缩后第一动作补写完整存档："晚几秒，不少内容"。
 - "钩子内 LLM 预生成增量存档"（真·压缩前语义落盘）是二期增强实验：多一次 LLM 调用的延迟与失败模式，先在 opencode 单端验证再推广。升级依据 = `_compactions.log` 累积的实测数据（摘要是否忠实、catch-up 是否经常缺失）。
 - **断链兜底**：唯一残余风险是"压缩后、补存档前会话恰好终止"。用 `save.ps1 check-tombstone` 兜住——最新墓碑之后 `.nodes` 无任何写入即告警；verify 也会联动出 `[WARN]` 行。零 LLM 成本，把静默损失变成显式提示。
+
+## DSH 侧扩展（v1.3.2 起）
+
+`dsh/agent-presets/batch-executor/`：batch-executor 的 DSH preset（cordis 组合格式，本目录为真源）。
+install.ps1 -BatchAgent 探测 `~/.dsh` 时自动复制到 `~/.dsh/.agent-presets/batch-executor/`。
+注意：DSH 模型路由属 host 平面，preset 不钉模型——跑批时手动选公司 vLLM 的 Qwen3.8-27B-W4A16-AWQ，
+persona 内置模型校验兜底（软纪律仅对目标模型可靠，实测 nemotron 会无视，见节点 7）。链式派生为手动档。

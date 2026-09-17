@@ -29,3 +29,6 @@ yarn-error.log*
 .agents/backup/
 .secrets/
 .agents/mcps/*/node_modules/
+
+# node-architect v1.4.1 directory lock
+.nodes/.lock.d/
