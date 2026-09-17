@@ -32,3 +32,13 @@ yarn-error.log*
 
 # node-architect v1.4.1 directory lock
 .nodes/.lock.d/
+
+# Local workstation state (not project assets)
+/.sisyphus/
+/.zcode/
+/changes/
+/tmp-zcode-e2e/
+/_diag/
+/.opencode/agent/
+/.opencode/plugin/
+node_modules/
