@@ -270,6 +270,41 @@ function verifyBatch(vNode, vSession, vBatch) {
   const markers = [`已完成批${n}`, `批${n} 已完成`, `batch ${n} done`, `completed batch ${n}`];
   check(markers.some(m => sessTxt.includes(m)), `SESSIONS contains batch ${n} completion marker`, `Write: completed batch ${n}: <output>`);
 
+  // Batch-specific D (v1.6.0 执行效率协议): plans file recon (batch 1) / calibration (batch 2+)
+  const plansPath = join(nodesDir, 'plans', `${vNode}.md`);
+  if (n === 1) {
+    let reconOk = false;
+    let reconFix = `create .nodes/plans/${vNode}.md from template`;
+    if (existsSync(plansPath)) {
+      const plansTxt = readUtf8(plansPath) || '';
+      const plines = plansTxt.split(/\r?\n/);
+      let sIdx = -1, eIdx = plines.length;
+      for (let i = 0; i < plines.length; i++) {
+        if (sIdx < 0 && /^#{1,3}\s*开工侦察/.test(plines[i])) { sIdx = i + 1; continue; }
+        if (sIdx >= 0 && /^(#{1,3}\s|\|)/.test(plines[i])) { eIdx = i; break; }
+      }
+      if (sIdx < 0) {
+        reconOk = true; // legacy plan (pre-v1.5.0, no recon section): skip
+        reconFix = '';
+      } else {
+        const seg = eIdx > sIdx ? plines.slice(sIdx, eIdx).join('\n') : '';
+        const hits2 = [...seg.matchAll(/\{[^{}\r\n]+\}/g)].map(m => m[0]);
+        reconOk = hits2.length === 0;
+        reconFix = `fill 开工侦察 placeholders in plans/${vNode}.md: ${hits2.join(', ')}`;
+      }
+    }
+    check(reconOk, `plans/${vNode}.md recon section filled (batch 1)`, reconFix);
+  } else {
+    let calibOk = false;
+    let calibFix = `backfill calibration log for batch ${n} in plans/${vNode}.md`;
+    if (existsSync(plansPath)) {
+      calibOk = new RegExp(`批${n}(?!\\d)`).test(readUtf8(plansPath) || '');
+    } else {
+      calibFix = `create .nodes/plans/${vNode}.md (missing)`;
+    }
+    check(calibOk, `plans calibration log contains batch ${n}`, calibFix);
+  }
+
   // CONTEXT today
   const ctx = readUtf8(ctxPath) || '';
   check(ctx.includes(today()), 'CONTEXT.md last-updated is today', 'Rewrite CONTEXT.md with today date');
@@ -390,6 +425,14 @@ if (actionForVerify === 'verify' || action === 'verify') {
       }
     } else {
       check(true, `archive/${node}.md exists`);
+      // 执行效率协议 v1.5：归档不得残留未替换的模板占位符（骨架生成那一轮除外）
+      const tplPath2 = join(nodesDir, 'archive', '_template.md');
+      if (existsSync(tplPath2)) {
+        const archTxt = readUtf8(archPath) || '';
+        const hits = [...(readUtf8(tplPath2) || '').matchAll(/\{[^{}\r\n]+\}/g)]
+          .map((m) => m[0]).filter((tok) => archTxt.includes(tok));
+        check(hits.length === 0, `archive/${node}.md placeholders filled`, `Replace remaining template placeholders: ${hits.join(', ')}`);
+      }
     }
   }
 

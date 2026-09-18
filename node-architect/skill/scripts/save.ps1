@@ -305,6 +305,55 @@ function Invoke-VerifyBatch {
     Write-Host $fixMsg -ForegroundColor Yellow
   }
 
+  # Batch-specific D (v1.6.0 efficiency protocol): plans file recon (batch 1) / calibration (batch 2+)
+  # NOTE: keep this block ASCII-only -- this script ships BOM-less and Windows PowerShell 5.1
+  #       parses BOM-less scripts as ANSI; CJK literals break parsing (AGENTS.md encoding rule).
+  #       CJK matching is done via \uXXXX regex escapes: 5f00 5de5 4fa6 5bdf = kai-gong zhen-cha (recon), 6279 = pi (batch)
+  $plansPath = Join-Path $nodesDir ('plans\' + $VNode + '.md')
+  if ($n -eq 1) {
+    $reconOk = $false; $reconFix = 'create .nodes/plans/' + $VNode + '.md from template'
+    if (Test-Path $plansPath) {
+      $plansTxt = Read-Utf8 $plansPath
+      $plines = @(($plansTxt -split "`r?`n"))
+      $sIdx = -1; $eIdx = $plines.Count
+      for ($i = 0; $i -lt $plines.Count; $i++) {
+        if ($sIdx -lt 0 -and $plines[$i] -match '^#{1,3}\s*\u5f00\u5de5\u4fa6\u5bdf') { $sIdx = $i + 1; continue }
+        if ($sIdx -ge 0 -and $plines[$i] -match '^(#{1,3}\s|\|)') { $eIdx = $i; break }
+      }
+      if ($sIdx -lt 0) {
+        $reconOk = $true  # legacy plan (pre-v1.5.0, no recon section): skip
+        $reconFix = ''
+      } else {
+        $seg = ''
+        if ($eIdx -gt $sIdx) { $seg = ($plines[$sIdx..($eIdx - 1)] -join "`n") }
+        $phHits2 = @()
+        foreach ($m in [regex]::Matches($seg, '\{[^{}\r\n]+\}')) { $phHits2 += $m.Value }
+        $reconOk = ($phHits2.Count -eq 0)
+        $reconFix = 'fill recon-section placeholders in plans/' + $VNode + '.md: ' + ($phHits2 -join ', ')
+      }
+    }
+    if ($reconOk) {
+      Write-Host ('  [OK]   plans/' + $VNode + '.md recon section filled (batch 1)')
+    } else {
+      $fails++
+      Write-Host ('  [FAIL] plans/' + $VNode + '.md recon section filled (batch 1)') -ForegroundColor Red
+      if ($reconFix) { Write-Host ('         Fix: ' + $reconFix) -ForegroundColor Yellow }
+    }
+  } else {
+    $calibOk = $false; $calibFix = 'backfill calibration log for batch ' + $n + ' in plans/' + $VNode + '.md (one line mentioning batch ' + $n + ')'
+    if (Test-Path $plansPath) {
+      $plansTxt = Read-Utf8 $plansPath
+      $calibOk = [bool]$plansTxt -and ($plansTxt -match ('\u6279' + $n + '(?!\d)'))
+    } else { $calibFix = 'create .nodes/plans/' + $VNode + '.md (missing)' }
+    if ($calibOk) {
+      Write-Host ('  [OK]   plans calibration log contains batch ' + $n)
+    } else {
+      $fails++
+      Write-Host ('  [FAIL] plans calibration log contains batch ' + $n) -ForegroundColor Red
+      Write-Host ('         Fix: ' + $calibFix) -ForegroundColor Yellow
+    }
+  }
+
   # CONTEXT today
   $ctx = Read-Utf8 $ctxPath
   $ctxOk = [bool]$ctx -and $ctx.Contains((Get-Date -Format 'yyyy-MM-dd'))
@@ -465,6 +514,17 @@ if ($Completed) {
     }
   } else {
     Check $true "archive/$Node.md exists"
+    # v1.5.0 efficiency protocol: archive must not keep unfilled template placeholders
+    # (skeleton-generation run is exempt; CJK-safe: ASCII-only per BOM-less convention)
+    $tplPath2 = Join-Path $nodesDir 'archive\_template.md'
+    if (Test-Path $tplPath2) {
+      $archTxt = Read-Utf8 $archPath
+      $phHits = @()
+      foreach ($m in [regex]::Matches((Read-Utf8 $tplPath2), '\{[^{}\r\n]+\}')) {
+        if ($archTxt.Contains($m.Value)) { $phHits += $m.Value }
+      }
+      Check ($phHits.Count -eq 0) "archive/$Node.md placeholders filled" "Replace remaining template placeholders: $($phHits -join ', ')"
+    }
   }
 }
 

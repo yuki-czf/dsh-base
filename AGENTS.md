@@ -1,5 +1,5 @@
 # AGENTS
-## 节点协议（node-architect v1.4.1）
+## 节点协议（node-architect v1.6.0）
 
 本项目使用 `.nodes` 节点存档协议对抗上下文压缩（摘要；规则全文以 `.nodes/PROTOCOL.md` 为准）。任何 AI 客户端会话必须遵守：
 

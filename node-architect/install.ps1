@@ -15,9 +15,7 @@ param(
   [switch]$Copy,
   [switch]$SkipNodes,
   [switch]$Bootstrap,
-  [switch]$Bridge,
-  [switch]$BatchAgent,
-  [string]$BatchModel = ''
+  [switch]$Bridge
 )
 $ErrorActionPreference = 'Stop'
 $master   = $PSScriptRoot
@@ -201,50 +199,6 @@ if ($Bridge) {
   Copy-Item $pluginSrc $pluginDst -Force
   Write-Host "OK: opencode 桥接插件 -> $pluginDst"
   Write-Host "OK: 桥接核心随真源分发 -> .agents\skills\node-architect\bridge\compact-context.ps1"
-}
-
-# ---------- 3.6) batch-executor agent（可选，-BatchAgent）：安装分批执行员 agent 到目标项目 ----------
-if ($BatchAgent) {
-  # 仅当 opencode 在目标客户端列表中时生效
-  $ocKey = 'opencode'
-  $ocInTargets = @($allClients | Where-Object { $_ -eq $ocKey })
-  if ($ocInTargets.Count -eq 0) {
-    $curLabel = if ($allClients.Count -gt 0) { $allClients -join ', ' } else { '无' }
-    Write-Host "提示: -BatchAgent 仅在 opencode 客户端目标时生效（当前目标: $curLabel），跳过。"
-  } else {
-    $agentSrc = Join-Path $master 'bridge\opencode\agents\batch-executor.md'
-    if (-not (Test-Path $agentSrc)) { throw "agent 模板缺失: $agentSrc" }
-    $agentDst = Join-Path $Project '.opencode\agent\batch-executor.md'
-    New-Item -ItemType Directory -Force -Path (Split-Path -Parent $agentDst) | Out-Null
-    $txt = [System.IO.File]::ReadAllText($agentSrc, [System.Text.Encoding]::UTF8)
-    if ($BatchModel) {
-      $txt = $txt.Replace('{{BATCH_MODEL}}', $BatchModel)
-    }
-    [System.IO.File]::WriteAllText($agentDst, $txt, (New-Object System.Text.UTF8Encoding($false)))
-    Write-Host "OK: batch-executor agent -> $agentDst"
-    if (-not $BatchModel) {
-      Write-Host "⚠ batch-executor 未配置模型：手工编辑 $agentDst 替换 {{BATCH_MODEL}}"
-    }
-  }
-
-  # DSH：探测全局 ~/.dsh → 复制 preset 两文件（模型路由属 host 平面，无占位符重写；
-  # 跑批时模型由用户在会话创建时手动选公司 vLLM 的 Qwen3.8-27B-W4A16-AWQ，persona 内置校验兜底）
-  $dshHome = Join-Path $env:USERPROFILE '.dsh'
-  if (Test-Path $dshHome) {
-    $presetSrcDir = Join-Path $master 'bridge\dsh\agent-presets\batch-executor'
-    $presetFiles = @('agent.cordis.yml', 'preset.yml')
-    foreach ($f in $presetFiles) {
-      $src2 = Join-Path $presetSrcDir $f
-      if (-not (Test-Path $src2)) { throw "DSH preset 文件缺失: $src2" }
-    }
-    $presetDst = Join-Path $dshHome '.agent-presets\batch-executor'
-    New-Item -ItemType Directory -Force -Path $presetDst | Out-Null
-    foreach ($f in $presetFiles) {
-      Copy-Item (Join-Path $presetSrcDir $f) (Join-Path $presetDst $f) -Force
-    }
-    Write-Host "OK: DSH batch-executor preset -> $presetDst"
-    Write-Host "? DSH 跑批请选模型：公司大模型(vLLM) / Qwen3.8-27B-W4A16-AWQ（新 preset 需重启 DSH 生效）"
-  }
 }
 
 # ---------- 4) .gitignore（仅联接模式：镜像是生成物，clone 后重跑本命令重建） ----------

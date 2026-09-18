@@ -1,4 +1,4 @@
-﻿---
+---
 name: node-architect
 version: 1.3.3
 description: 长项目节点存档与恢复协议。项目根存在 .nodes/ 时必须启用：会话开工先读档恢复全貌，节点完成、用户要求存档或大改动落地时写存档。也用于用户说"初始化节点协议、存档、恢复进度、开新节点"时。
@@ -55,7 +55,6 @@ whenToUse: 项目根存在 .nodes/ 目录；或用户要求建立节点化项目
 
 - **询问制**：登记节点时预判超预算 → 先问用户走 **spec-superflow**（proposal/specs/design/tasks + execution-contract 门禁，重型）还是**本分批约定**（轻量），二选一不混用；用户选定本约定 → 登记同时在 `.nodes/plans/<节点名>.md` 落批次计划（模板 `references/templates/BATCH-PLAN.md`），PROGRESS 状态记 `进行中·批N/M`。
 - **执行纪律**（全文见 `.nodes/PROTOCOL.md`「批次协议」节）：一批一会话（会话标识 `<节点>-b<N>`）；批末必存档且收口固定走 `save.ps1 commit`（lock→CONTEXT→unlock→verify-batch 原子完成，禁止手工拆步）；**完成字样时序**：verify 全 [OK] 前不得在任何档案写入"已完成"表述；超限即断；校准回路回填计划文件。
-- opencode 加速通道：全局 agent `batch-executor` 已固化上述纪律（真源为母版 `bridge/opencode/agents/batch-executor.md` 模板，install `-BatchAgent` 安装后为生成物；本机全局副本改后需手动同步回母版）。
 
 ## 跨客户端
 

@@ -6,6 +6,7 @@
 |---|------|----------|------|-----------|----------|
 | 10 | v1.4.0 skill 优化与母版同步（分层文档 / 真源对齐 / 一键存档 / 目录锁 / 跨平台 save.mjs） | SKILL.md 分三层（精简版 + QUICKREF 速查 + SKILL-FULL 全文）；母版↔真源镜像 diff=0；版本号三处一致 v1.4.0（SKILL frontmatter / .nodes/PROTOCOL.md / AGENTS 指针，且 init 能自刷新）；save.ps1 新增 `save` 与 `trim-decisions` 动作 + 目录锁原子创建 + DECISIONS 行数与待验收过期双告警；save.mjs 跨平台功能对等；新机解压安装实测通过；dist v1.4.0 zip+sha256 | 已完成 | main | 2026-09-17 |
 | 14 | 云端分发入口：remote-install 泛化多模块（原云端#4） | ①-Module 参数路由 node-architect/ssh-runner，默认行为向后兼容 ②-ZipPath 离线安装可用 ③本地 zip 模拟云端：两模块均能装入临时项目且产物完整 ④README 含 ssh-runner 云端安装命令 | 已完成 | opencode 主会话 | 2026-08-22 |
+| 15 | v1.5.0+v1.6.0 batch-executor 退役与执行效率协议（另一会话演进，本次补登记） | v1.5.0：batch-executor 全家（derive-next-batch.ps1/DSH preset/opencode agent）退役入 attic/，verify -Completed 增归档占位符校验；v1.6.0：PROTOCOL 增「执行效率协议」（开工侦察/批次依赖标注/批内检查点/效率复盘）、拆批触发扩至时间巨头（>15 文件/>100 处/>40 分钟）、协议本体 ≤150 行红线、verify-batch 增侦察段占位符与校准日志机器校验；save.mjs 对等；真源同步 v1.6.0；dist v1.6.0 zip | 已完成 | main | 2026-09-18 |
 | 13 | mcp-ssh-runner v0.2 凭据隔离收紧（原云端#3） | ①凭据改平文件（ssh_host/user/password 等），一次 read 最多暴露一字段 ②resolved 临时文件在服务端启动后数秒内删除（时序验证）③opencode.json 附 permission deny 拦截 .secrets ④.secrets ACL 收紧仅当前用户 ⑤全量回归通过 | 已完成 | opencode 主会话 | 2026-08-22 |
 | 12 | dsh-mcp skill（AI 纪律层）（原云端#2） | 教 AI 排障/升级走 installer、禁读 .secrets | 待开始 | — | 2026-08-22 |
 | 11 | mcp-ssh-runner 统一源封装（原云端#1） | ①修正版 runner 通过 stdio 握手测试 ②install.ps1 幂等生成 ≥4 客户端配置且不覆盖已有条目 ③凭据零进 argv/零进客户端配置 ④.secrets 模板初始化+gitignore 自动补齐 | 已完成 | opencode 主会话 | 2026-08-22 |
