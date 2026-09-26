@@ -140,3 +140,33 @@
 - **决定**：v1.5.0 将 batch-executor 全家（derive-next-batch.ps1 / DSH preset / opencode agent）移入 `attic/batch-executor-v1.5.0/` 退役存档，`verify -Completed` 增「归档无未替换占位符」机器校验；v1.6.0 增「执行效率协议」节（开工侦察三问 / 批次依赖标注 / 批内检查点 / 效率复盘归档必填），拆批触发条件扩至时间巨头（>15 文件 / >100 处改动 / >40 分钟），`verify-batch` 增侦察段占位符清空与校准日志回填两道机器校验，协议本体 ≤150 行红线。
 - **理由**：退役——实验关停但 attic 保留全量文件可随时复活；效率协议——把三类浪费前移到登记阶段，且全部配机器校验兜底而非纯提示词纪律。新增脚本代码块采用 ASCII-only（CJK 匹配用 \uXXXX 转义），规避编辑工具剥 BOM 后 PS 5.1 按 ANSI 解析中文碎裂的实证坑。
 - **影响**：本地母版 v1.6.0；安装副本与 AGENTS 指针同步 v1.6.0；dist v1.6.0 zip（47.4 KB，因 batch-executor 移出体积下降）；仓库根 dist\ 安装包更新；DSH 链式派生能力随退役消失，批末恢复手动开下一批。
+
+## [2026-09-25] DSH 机器环境：Gemini 载荷改造（browser/playwright 裁剪 + gemini-lean 预设 + dsh-lean-tools 掩码插件）
+
+- **背景**：网关管理员 mubai 委托的《DSH × Gemini 3.8 Flash 性能改造说明书》执行（一次性委托，非本仓库节点）。本机基线 93 工具/69.9KB schema/10.2KB sys（同说明书 61/53.5KB 口径更重：多装了 playwright MCP 与项目 MCP）。
+- **决定**：① `~/.dsh/profiles/desktop/cordis.patch.yml` 追加标记块：禁 `tool-browser`/`mcp-playwright`/`mcp-resources` 三行、wallpaper 仅关 agent 公告；② 新增本地零依赖插件 `~/.dsh/plugins/dsh-lean-tools`（预设作用域 `ctx.tools.restrict` allow 掩码 + prompt 段遮蔽 + 防膨胀规则段），junction 进两个 profile 的 node_modules；③ 声明 `gemini-lean` 预设（14 工具白名单）；④ A/B 用独立 web profile 引导层（`dsh --profile web` + token-cookie API：`POST /api/<ns>/<method>`，信封 `{type:'client-request',rpcId,method,payload:{args:{request:…}}}`）全自动完成。
+- **理由**：载荷削减全部走声明式配置面（patch 行禁用 + 预设声明），可整体回滚；掩码语义按 dsh-tools `view()` 源码实证（restriction 过滤全部继承面而非仅宿主全局——`allow:[]` 会连预设工具一起掩掉，白名单必须显式列名）。
+- **影响**：默认会话 93→32 工具/30.8KB/8.1KB sys；gemini-lean 15 工具/16.1KB/5.7KB sys（固定 ≈6.1K tokens，命中管理员推算）；A/B 实证首步并行+分页读取。遗留：桌面宿主重启前桌面侧 gemini-lean 不可用（插件代码 HMR 不热载）；本机 pwsh 管道按 GBK 处理无 BOM UTF-8（Add-Content 吞换行）——写 ~/.dsh 一律字节级操作。报告与脚本：`_diag/gemini-perf/`（REPORT.md）。
+
+## [2026-09-25] 修正：上条 §3.2 全局裁剪全量回滚，改为纯增量 gemini-lean（用户澄清委托边界）
+
+- **背景**：用户明确"不能改动到别的 Agent，预期是新建一个针对 Gemini 的 Agent 且不改动原 Agent 功能"。上条把说明书 §3.2"对编码类 workspace 禁用浏览器插件"执行成了 profile 级全局禁用（tool-browser/mcp-playwright/mcp-resources + wallpaper 公告），越出委托边界。
+- **决定**：① 桌面 patch 重写为「原始备份 + 仅预设声明块」，全局行零残留（YAML 校验 + 探针会话实证 93 工具/69,902B/sys 10,164B 与基线逐字节一致）；② dsh-lean-tools 增至五处预设作用域段遮蔽（harness:source 置空、app:web-surface 压缩、tool:browser / plugin:dsh-wallpaper / mcp-resource-servers 置空），lean 效果自足不依赖全局禁用；③ 回归验证：全局还原后 lean 会话仍 15 工具/16,085B/5,689B 不变。
+- **理由**：allow 掩码与段遮蔽本来就只作用于选用预设的会话，全局裁剪对 lean 效果是冗余的；委托边界优先于说明书字面。
+- **影响**：默认/standard 会话完全恢复原状；gemini-lean 数据不变（每请求固定 ≈6.1K tokens）；REPORT.md 重写为 v2。桌面宿主重启的前置条件不变（插件代码热载限制）。
+
+
+## [2026-09-26] 桌面端线上工具掩码落地：dsh-lean-tools host v11（system-prompt/assemble 瀑布）
+
+- **背景**：v2 后桌面实测 lean 会话仍 82 工具上线——v9/v10 的注册表掩码（ctx.tools.restrict）日志显示挂载成功，但解码 request/header 仍 82 工具（1a2b4452 实证）。
+- **决定/根因**：请求工具目录的真源 = SystemPrompt.assemble() 的 toolProviders（dsh-system-prompt/index.js:319），非 ctx.tools 注册表视图；官方变换口为 system-prompt/assemble 瀑布（:355，dsh-agent 模型切换同款机制）。host.js v11 挂该瀑布，按 context.agent → composedPreset()（官方契约返回字符串）判定 lean 后过滤 assembly.tools 至 15 名单；pre-step 注册表掩码保留为执行层兜底。前置两修：composedPreset 返回字符串需直读（v9 只认对象导致正确答案被拒）；subagent 注册在非全局层、进不了全局 allow 校验（08:53 抛错），从名单移除——桌面 lean 因而无 subagent。
+- **影响**：桌面终态 dd0a81d4：15 工具/14,262B/sys 5,175B（基线 93/69,902B/10,195B；每请求省 ~55.6KB≈1.4万 token）；每步日志 wire 82→15；standard 探针 lean=false 放行零影响。配置热载可改名单（行 config.allow），代码改动仍需重启。规则段已按用户偏好移除预算思考行。
+
+
+## [2026-09-26] perf-gemini-lean v12：技能行为压制 + subagent 名单对齐 + TSCG 实测否决（TTFT 续篇）
+
+- **背景**：用户反馈 Gemini 首字慢且"先加载技能不先思考"；链路 DSH→网关→自建 CPA(CLIProxyAPI v7.3.17)→Antigravity。侦察实证：lean 系统提示词（5,175B）与 standard（10,237B）均无技能目录——skill 工具 description 引用的 "session skill catalog" 悬空，听话模型开局易触发探索性加载。
+- **决定**：① rulesText 增补 plan-first + 技能按需两条（yml 热改即时生效）；② host.js v12 自适应 registry 掩码——restrict 遇非全局注册名（subagent，preset 自层注册）抛错时按错误信息里的 known 列表取交集重试，替代 v10 的整次 fail-open；③ wire 名单 15→16 放行 subagent（preset 的 tool-subagent 行已在，可调性待重启实测）。
+- **TSCG 否决（实测>宣称）**：@tscg/core 1.4.3 compressDescriptions 用 dd0a81d4 真实 15 工具目录实测仅省 0.3%（48B）；其 50-72% 宣称是破坏 schema 结构的 full-compress 口径，description-only 在已精简目录上收益≈0——v11 白名单已吃掉大头，剩余 14.3KB 主体是参数 schema，无免费压缩空间。vendor 未落地即回退。
+- **CPA 联合裁决**（家里侧执行已生效）：antigravity connection-pool 开（默认关）；quota-exceeded.switch-preview-model 关（配额紧张静默切 preview 模型是"时快时慢"嫌疑元凶）；session-affinity 否决——家里 9/21 实测双账号 RR 缓存命中 92-98%（10M tokens 会话 93%），官方注释推断被证伪且粘性伤配额分摊；**隐式缓存在 CPA→Antigravity OAuth 链路实测有效**——修正"OAuth 不可缓存"旧假设（其仅适用显式 caches.create）。reasoningEffort=high 源头=DSH 侧 agent-default-model 配置行（降档一行即改，红线待数据）。
+- **影响**：rulesText 热改生效；host.js v12+allow16 需重启 DSH 桌面；回滚=恢复 cordis.patch.yml.bak-dsh-v12-20260926 + host.js.bak-v11 + 删 rulesText 两行。验收点：wire 16、`registry MASKED (allow 15 adaptive from 16; dropped subagent)` 日志、subagent 真调、首步 plan-first。
