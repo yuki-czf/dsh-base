@@ -13,6 +13,7 @@
   save.ps1 checkpoint -Node 跑通登录流程 -Session main -Recon "..." [-Note "..."]
   save.ps1 review-audit [-Over 14]
   save.ps1 check-tombstone
+  save.ps1 next-node -Node <name> [-Accept <criteria>] [-Session <session>]
   save.ps1 trim-decisions [-Keep 20]
   save.ps1 trim-context [-Apply] [[-MaxCtxLines 60] [-MaxCtxLineChars 6000]]
   save.ps1 trim-progress [-Apply] [[-MaxProgLineChars 600] [-NodeColChars 120] [-CriteriaColChars 250] [-StatusColChars 200]]
@@ -23,7 +24,7 @@
 #>
 param(
   [Parameter(Mandatory = $true, Position = 0)]
-  [ValidateSet('lock', 'unlock', 'verify', 'verify-batch', 'commit', 'save', 'checkpoint', 'review-audit', 'check-tombstone', 'trim-decisions', 'trim-context', 'trim-progress')]
+  [ValidateSet('lock', 'unlock', 'verify', 'verify-batch', 'commit', 'save', 'checkpoint', 'review-audit', 'check-tombstone', 'trim-decisions', 'trim-context', 'trim-progress', 'next-node')]
   [string]$Action,
   [string]$Project = (Get-Location).Path,
   [string]$Session = 'main',
@@ -34,6 +35,7 @@ param(
   [switch]$Completed,
   [string]$Note = '',
   [string]$Recon = '',
+  [string]$Accept = '',
   [int]$Over = 14,
   [switch]$Apply,
   [int]$MaxCtxLines = 60,
@@ -74,6 +76,9 @@ if ($Action -eq 'save') {
 if ($Action -eq 'checkpoint') {
   if (-not $Node) { throw 'checkpoint requires -Node' }
   if (-not $Recon -and -not $Note) { throw 'checkpoint requires -Recon and/or -Note' }
+}
+if ($Action -eq 'next-node') {
+  if (-not $Node) { throw 'next-node requires -Node <name>' }
 }
 
 $lockDir    = Join-Path $nodesDir '.lock.d'
@@ -331,6 +336,67 @@ if ($Action -eq 'review-audit') {
   }
   Write-Host ''
   Write-Host 'OK: No overdue pending-review nodes.'
+  exit 0
+}
+
+# ---------- next-node (v1.8.0) ----------
+# Atomic node-number allocation (ticket-server pattern): under the .lock.d/ lock,
+# scan the WHOLE PROGRESS table for the max number, take max+1, insert the new row
+# below the header separator, release. Kills both races and partial scans.
+# CJK via code points (BOM-less ANSI-parse safety):
+#   0x5F85 0x5F00 0x59CB = status: pending-start
+#   0x5F85 0x8865 0x5145 = placeholder acceptance criteria
+if ($Action -eq 'next-node') {
+  $lockOk = $false
+  $lr = $null
+  for ($i = 0; $i -lt 30; $i++) {
+    $lr = Acquire-Lock $Session
+    if ($lr.Ok) { $lockOk = $true; break }
+    Start-Sleep -Seconds 1
+  }
+  if (-not $lockOk) { Write-Host "[FAIL] Lock busy after 30s: $($lr.Message)" -ForegroundColor Red; exit 1 }
+  $failMsg = ''
+  $okMsg = ''
+  try {
+    $progPathN = Join-Path $nodesDir 'PROGRESS.md'
+    if (-not (Test-Path -LiteralPath $progPathN)) { throw 'PROGRESS.md not found' }
+    $lines = @((Read-Utf8 $progPathN) -split "`r?`n")
+    $maxN = 0
+    $numCount = @{}
+    $exists = $false
+    foreach ($ln in $lines) {
+      if ($ln -match '^\|\s*(\d+)\s*\|') {
+        $n = [int]$Matches[1]
+        if ($n -gt $maxN) { $maxN = $n }
+        if ($numCount.ContainsKey($n)) { $numCount[$n]++ } else { $numCount[$n] = 1 }
+      }
+      if ($Node -and $ln -match '^\|' -and $ln.Contains($Node)) { $exists = $true }
+    }
+    if ($exists) { throw "Node '$Node' already present in PROGRESS.md (no registration)" }
+    $newN = $maxN + 1
+    $statusTxt = -join ([char]0x5F85, [char]0x5F00, [char]0x59CB)
+    $acceptTxt = if ($Accept) { $Accept } else { -join ([char]0x5F85, [char]0x8865, [char]0x5145) }
+    $row = "| $newN | $Node | $acceptTxt | $statusTxt | $Session | $(Get-Date -Format 'yyyy-MM-dd') |"
+    $sepIdx = -1
+    for ($j = 0; $j -lt $lines.Count; $j++) {
+      if ($lines[$j] -match '^\|[\s\-|]+\|$') { $sepIdx = $j; break }
+    }
+    if ($sepIdx -lt 0) { throw 'PROGRESS.md header separator not found' }
+    $tail = if ($sepIdx + 1 -le $lines.Count - 1) { @($lines[($sepIdx + 1)..($lines.Count - 1)]) } else { @() }
+    $outLines = @($lines[0..$sepIdx]) + @($row) + $tail
+    Write-Utf8 $progPathN (($outLines -join "`r`n").TrimEnd() + "`r`n")
+    $dupNote = ''
+    $dupKeys = @($numCount.Keys | Where-Object { $numCount[$_] -gt 1 } | Sort-Object)
+    if ($dupKeys.Count -gt 0) { $dupNote = ' (note: existing duplicate numbers: ' + (($dupKeys | ForEach-Object { "#$_ x$($numCount[$_])" }) -join ', ') + ')' }
+    $okMsg = "OK: node #$newN registered -> $Node (owner=$Session)$dupNote"
+  } catch {
+    $failMsg = $_.Exception.Message
+  } finally {
+    $rl = Release-Lock $Session
+    if (-not $rl.Ok) { Write-Warning $rl.Message }
+  }
+  if ($failMsg) { Write-Host "[FAIL] $failMsg" -ForegroundColor Red; exit 1 }
+  Write-Host $okMsg
   exit 0
 }
 
@@ -859,6 +925,22 @@ if (Test-Path $progPath) {
         }
       } catch { }
     }
+  }
+}
+
+# v1.8.0 numbering governance: duplicate node-number detection (WARN only).
+if (Test-Path $progPath) {
+  $numCountV = @{}
+  foreach ($pl in ((Read-Utf8 $progPath) -split "`r?`n")) {
+    if ($pl -match '^\|\s*(\d+)\s*\|') {
+      $nv = [int]$Matches[1]
+      if ($numCountV.ContainsKey($nv)) { $numCountV[$nv]++ } else { $numCountV[$nv] = 1 }
+    }
+  }
+  $dupV = @($numCountV.Keys | Where-Object { $numCountV[$_] -gt 1 } | Sort-Object)
+  if ($dupV.Count -gt 0) {
+    $dupListV = ($dupV | ForEach-Object { "#$_ x$($numCountV[$_])" }) -join ', '
+    Write-Host "  [WARN] Duplicate node number(s) in PROGRESS.md: $dupListV - historical: document in DECISIONS; new collision: later registrant renumbers (protocol numbering rule)" -ForegroundColor Yellow
   }
 }
 

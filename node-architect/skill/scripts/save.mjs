@@ -11,6 +11,7 @@
  *   node save.mjs verify-batch --node "Run login flow" --session main --batch 2
  *   node save.mjs checkpoint --node "Run login flow" --session main [--recon "..."] [--note "..."]
  *   node save.mjs review-audit [--over 14]
+ *   node save.mjs next-node --node "Name" [--accept "..."] [--session main]
  *   node save.mjs check-tombstone
  *   node save.mjs trim-decisions [--keep 20]
  *   node save.mjs trim-context [--apply] [--max-ctx-lines 60] [--max-ctx-line-chars 6000]
@@ -38,6 +39,7 @@ const project = resolve(getArg('project', process.cwd()));
 const session = getArg('session', 'main');
 const node = getArg('node', '');
 const batch = getArg('batch', '');
+const accept = getArg('accept', '');
 const contextFile = getArg('context-file', '');
 const keep = parseInt(getArg('keep', '20'), 10);
 const completed = hasFlag('completed');
@@ -50,7 +52,7 @@ const TIMEOUT_MIN = 10;
 // ---------- Validation ----------
 if (!existsSync(nodesDir)) { console.error(`Not found: ${nodesDir} (run init-nodes first)`); process.exit(1); }
 
-const VALID_ACTIONS = ['lock', 'unlock', 'verify', 'verify-batch', 'commit', 'save', 'checkpoint', 'review-audit', 'check-tombstone', 'trim-decisions', 'trim-context', 'trim-progress'];
+const VALID_ACTIONS = ['lock', 'unlock', 'verify', 'verify-batch', 'commit', 'save', 'checkpoint', 'review-audit', 'check-tombstone', 'trim-decisions', 'trim-context', 'trim-progress', 'next-node'];
 if (!VALID_ACTIONS.includes(action)) {
   console.error(`Usage: node save.mjs <${VALID_ACTIONS.join('|')}> [options]`);
   process.exit(1);
@@ -81,6 +83,9 @@ if (action === 'save') {
 }
 if (action === 'checkpoint') {
   if (!node) die('checkpoint requires --node');
+}
+if (action === 'next-node') {
+  if (!node) die('next-node requires --node <name>');
 }
 
 function die(msg) { console.error(`[FAIL] ${msg}`); process.exit(1); }
@@ -332,6 +337,63 @@ if (action === 'review-audit') {
     process.exit(3);
   }
   console.log('\nOK: No overdue pending-review nodes.');
+  process.exit(0);
+}
+
+// ---------- next-node (v1.8.0) ----------
+// Atomic node-number allocation (ticket-server pattern): under the lock, scan the
+// WHOLE PROGRESS table for the max number, take max+1, insert the row below the
+// header separator, release. Kills both races and partial scans.
+const sleepSync = (ms) => { const sab = new SharedArrayBuffer(4); Atomics.wait(new Int32Array(sab), 0, 0, ms); };
+if (action === 'next-node') {
+  let locked = false;
+  let lastMsg = '';
+  for (let i = 0; i < 30; i++) {
+    const r = acquireLock(session);
+    if (r.ok) { locked = true; break; }
+    lastMsg = r.msg;
+    sleepSync(1000);
+  }
+  if (!locked) { console.error(`[FAIL] Lock busy after 30s: ${lastMsg}`); process.exit(1); }
+  let failMsg = '';
+  let okMsg = '';
+  try {
+    const progPathN = join(nodesDir, 'PROGRESS.md');
+    if (!existsSync(progPathN)) throw new Error('PROGRESS.md not found');
+    const lines = (readUtf8(progPathN) || '').split(/\r?\n/);
+    let maxN = 0;
+    const numCount = {};
+    let exists = false;
+    for (const ln of lines) {
+      const m = ln.match(/^\|\s*(\d+)\s*\|/);
+      if (m) {
+        const n = parseInt(m[1], 10);
+        if (n > maxN) maxN = n;
+        numCount[n] = (numCount[n] || 0) + 1;
+      }
+      if (node && /^\|/.test(ln) && ln.includes(node)) exists = true;
+    }
+    if (exists) throw new Error(`Node '${node}' already present in PROGRESS.md (no registration)`);
+    const newN = maxN + 1;
+    const row = `| ${newN} | ${node} | ${accept || '待补充'} | 待开始 | ${session} | ${today()} |`;
+    let sepIdx = -1;
+    for (let j = 0; j < lines.length; j++) {
+      if (/^\|[\s\-|]+\|$/.test(lines[j])) { sepIdx = j; break; }
+    }
+    if (sepIdx < 0) throw new Error('PROGRESS.md header separator not found');
+    const outLines = [...lines.slice(0, sepIdx + 1), row, ...lines.slice(sepIdx + 1)];
+    writeUtf8(progPathN, outLines.join('\n').trimEnd() + '\n');
+    const dupKeys = Object.keys(numCount).map(Number).filter((k) => numCount[k] > 1).sort((a, b) => a - b);
+    const dupNote = dupKeys.length ? ` (note: existing duplicate numbers: ${dupKeys.map((k) => `#${k} x${numCount[k]}`).join(', ')})` : '';
+    okMsg = `OK: node #${newN} registered -> ${node} (owner=${session})${dupNote}`;
+  } catch (e) {
+    failMsg = e.message;
+  } finally {
+    const rl = releaseLock(session);
+    if (!rl.ok) console.error(`[WARN] ${rl.msg}`);
+  }
+  if (failMsg) { console.error(`[FAIL] ${failMsg}`); process.exit(1); }
+  console.log(okMsg);
   process.exit(0);
 }
 
@@ -738,6 +800,19 @@ if (actionForVerify === 'verify' || action === 'verify') {
           }
         }
       }
+    }
+  }
+
+  // v1.8.0 numbering governance: duplicate node-number detection (WARN only).
+  if (existsSync(progPath)) {
+    const numCountV = {};
+    for (const pl of (readUtf8(progPath) || '').split(/\r?\n/)) {
+      const m = pl.match(/^\|\s*(\d+)\s*\|/);
+      if (m) { const n = parseInt(m[1], 10); numCountV[n] = (numCountV[n] || 0) + 1; }
+    }
+    const dupV = Object.keys(numCountV).map(Number).filter((k) => numCountV[k] > 1).sort((a, b) => a - b);
+    if (dupV.length) {
+      console.log(`  [WARN] Duplicate node number(s) in PROGRESS.md: ${dupV.map((k) => `#${k} x${numCountV[k]}`).join(', ')} - historical: document in DECISIONS; new collision: later registrant renumbers (protocol numbering rule)`);
     }
   }
 

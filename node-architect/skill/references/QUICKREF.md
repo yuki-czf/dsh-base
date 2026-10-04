@@ -31,6 +31,7 @@ init-nodes.ps1 [-Project <项目根>]
 | `save.ps1 verify-batch -Node <节点名> -Session <会话> -Batch <N>` | 批末存档校验（批次状态 + 计划侦察/校准回填检查） |
 | `save.ps1 commit -Node <节点名> -Session <会话> -Batch <N> -ContextFile <暂存文件>` | 原子收口（lock→CONTEXT→unlock→verify-batch 一条命令） |
 | `save.ps1 save -Node <节点名> -Session <会话> -ContextFile <暂存文件> [-Completed]` | 一键存档（lock→CONTEXT→unlock→verify 一条命令，非批次场景） |
+| `save.ps1 next-node -Node <名称> [-Accept <验收>] [-Session <会话>]` | 新节点原子取号：锁内全表扫描 → max+1 → 表头下插行（ticket-server 模式，防并发撞号） |
 | `save.ps1 check-tombstone` | 检查压缩后是否漏补存档（退出码 3 = 有告警） |
 | `save.ps1 trim-decisions [-Keep <N>]` | 剪切旧决策到 archive/（默认保留最近 20 条；v1.7.0 行数感知=自动减条数保 DECISIONS ≤200 行） |
 | `save.ps1 trim-context [-Apply]` | 滚出 CONTEXT.md 已完成条目/超长引言行 → archive/context-<日期>.md（默认 dry-run，`-Apply` 落盘） |
