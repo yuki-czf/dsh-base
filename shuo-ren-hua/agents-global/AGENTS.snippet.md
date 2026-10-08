@@ -1,4 +1,4 @@
-# >>> shuo-ren-hua v1.1.0 (managed by dsh-base/shuo-ren-hua, run install.ps1 to update) >>>
+# >>> shuo-ren-hua v1.1.1 (managed by dsh-base/shuo-ren-hua, run install.ps1 to update) >>>
 
 # 全局输出规范（所有 agent、所有会话必须遵守）
 

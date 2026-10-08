@@ -66,7 +66,8 @@ foreach ($t in $targets) {
       $lines = [System.IO.File]::ReadAllLines($cfg.agents)
       $range = Get-BlockRange $lines
       if ($range) {
-        $kept = @($lines[0..($range[0]-1)] + $lines[($range[1]+1)..($lines.Count-1)] | Where-Object { $null -ne $_ })
+        # 用显式循环剔除标记块区间，避免 PowerShell 退化区间（0..-1 → @(0,-1)）陷阱
+        $kept = @(for ($i = 0; $i -lt $lines.Count; $i++) { if ($i -lt $range[0] -or $i -gt $range[1]) { $lines[$i] } })
         [System.IO.File]::WriteAllLines($cfg.agents, $kept, $utf8NoBom)
         Write-Host "OK [$t]: 已从 $($cfg.agents) 剥离标记块"
       }
@@ -90,7 +91,8 @@ foreach ($t in $targets) {
       $lines = [System.IO.File]::ReadAllLines($cfg.agents)
       $range = Get-BlockRange $lines
       if ($range) {
-        $kept = @($lines[0..($range[0]-1)] + $lines[($range[1]+1)..($lines.Count-1)] | Where-Object { $null -ne $_ })
+        # 用显式循环剔除标记块区间，避免 PowerShell 退化区间（0..-1 → @(0,-1)）陷阱
+        $kept = @(for ($i = 0; $i -lt $lines.Count; $i++) { if ($i -lt $range[0] -or $i -gt $range[1]) { $lines[$i] } })
         $new = ($kept -join "`n").TrimEnd("`n") + "`n`n" + $snippet.TrimEnd("`n") + "`n"
         [System.IO.File]::WriteAllText($cfg.agents, $new, $utf8NoBom)
         Write-Host "OK [$t]: 标记块已更新 -> $($cfg.agents)"
