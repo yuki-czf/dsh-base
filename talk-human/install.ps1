@@ -10,7 +10,8 @@
 #>
 param(
   [string[]]$Clients = @(),
-  [switch]$Remove
+  [switch]$Remove,
+  [switch]$Bootstrap
 )
 $ErrorActionPreference = 'Stop'
 $master = $PSScriptRoot
@@ -23,6 +24,45 @@ if (-not (Test-Path $snippetPath)) { throw "片段缺失: $snippetPath" }
 $ver = '?'
 $verMatch = Select-String -Path (Join-Path $skillSrc 'SKILL.md') -Pattern '^version:\s*(\S+)\s*$' | Select-Object -First 1
 if ($verMatch) { $ver = $verMatch.Matches[0].Groups[1].Value }
+
+# ---------- -Bootstrap 模式：把安装引导技能装进各客户端的全局技能目录（一次性） ----------
+if ($Bootstrap) {
+  $bootSrc = Join-Path $master 'bootstrap'
+  if (-not (Test-Path $bootSrc)) { throw "引导技能缺失: $bootSrc" }
+  $globalDirs = [ordered]@{
+    opencode = "$env:USERPROFILE\.config\opencode\skills"
+    claude   = "$env:USERPROFILE\.claude\skills"
+    codex    = "$env:USERPROFILE\.codex\skills"
+    zcode    = "$env:USERPROFILE\.zcode\skills"
+  }
+  $fingerprints = @{
+    opencode = { [bool]$env:OPENCODE }
+    claude   = { [bool]($env:CLAUDECODE -or $env:CLAUDE_CODE_ENTRYPOINT) }
+    codex    = { [bool]$env:CODEX_HOME }
+    zcode    = { [bool]$env:ZCODE }
+  }
+  $targets = @($Clients | ForEach-Object { $_ -split ',' } | ForEach-Object { $_.Trim().ToLower() } | Where-Object { $_ })
+  $detected = @($fingerprints.Keys | Where-Object { & $fingerprints[$_] })
+  $targets = @($targets + $detected | Select-Object -Unique)
+  if (-not $targets) { $targets = @($globalDirs.Keys) }
+  foreach ($t in $targets) {
+    if (-not $globalDirs.Contains($t)) { Write-Warning "未知客户端 '$t'，跳过"; continue }
+    $dst = Join-Path $globalDirs[$t] 'talk-human-installer'
+    if (Test-Path $dst) { Remove-Item $dst -Recurse -Force }
+    New-Item -ItemType Directory -Force -Path $globalDirs[$t] | Out-Null
+    Copy-Item $bootSrc $dst -Recurse -Force
+    # 把引导技能中的 {{MASTER}} 占位符重写为本机母版实际路径（换机后重跑 -Bootstrap 即自愈）
+    $bootMd = Join-Path $dst 'SKILL.md'
+    if (Test-Path $bootMd) {
+      $txt = [System.IO.File]::ReadAllText($bootMd, [System.Text.Encoding]::UTF8)
+      [System.IO.File]::WriteAllText($bootMd, $txt.Replace('{{MASTER}}', $master), (New-Object System.Text.UTF8Encoding($false)))
+    }
+    Write-Host "OK [$t]: 引导技能 -> $dst（母版路径: $master）"
+  }
+  Write-Host ""
+  Write-Host "完成。此后在任何会话里说『装说人话』即可安装/更新。"
+  return
+}
 
 $BEGIN = '# >>> talk-human'
 $END   = '# <<< talk-human'

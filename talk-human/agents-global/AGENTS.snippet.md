@@ -1,4 +1,4 @@
-# >>> talk-human v1.2.0 (managed by dsh-base/talk-human, run install.ps1 to update) >>>
+# >>> talk-human v1.3.0 (managed by dsh-base/talk-human, run install.ps1 to update) >>>
 
 # 全局输出规范（所有 agent、所有会话必须遵守）
 
