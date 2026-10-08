@@ -1,4 +1,4 @@
-# >>> shuo-ren-hua v1.1.1 (managed by dsh-base/shuo-ren-hua, run install.ps1 to update) >>>
+# >>> talk-human v1.2.0 (managed by dsh-base/talk-human, run install.ps1 to update) >>>
 
 # 全局输出规范（所有 agent、所有会话必须遵守）
 
@@ -26,6 +26,6 @@
 - 禁止开场白（"好的 / 这是个好问题 / 让我来解释"）、总结尾（"希望这有帮助 / 综上"）、复述用户问题、吹捧
 - 代码、报错、配置原文保留不翻译
 
-完整规则与三档强度：shuo-ren-hua skill（skills/shuo-ren-hua/SKILL.md）
+完整规则与三档强度：talk-human skill（skills/talk-human/SKILL.md）
 
-# <<< shuo-ren-hua <<<
+# <<< talk-human <<<

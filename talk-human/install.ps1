@@ -1,8 +1,8 @@
 ﻿#Requires -Version 5.1
 <#
 .SYNOPSIS
-  shuo-ren-hua（说人话输出规范）全局安装/更新/卸载。
-  母版：本目录（dsh-base/shuo-ren-hua），装到各客户端的全局 skills 目录 + AGENTS.md 标记块注入。
+  talk-human（说人话输出规范）全局安装/更新/卸载。
+  母版：本目录（dsh-base/talk-human），装到各客户端的全局 skills 目录 + AGENTS.md 标记块注入。
 .EXAMPLE
   powershell -ExecutionPolicy Bypass -File install.ps1                     # 自动检测客户端，默认 opencode+claude
   powershell -ExecutionPolicy Bypass -File install.ps1 -Clients opencode,codex
@@ -24,8 +24,8 @@ $ver = '?'
 $verMatch = Select-String -Path (Join-Path $skillSrc 'SKILL.md') -Pattern '^version:\s*(\S+)\s*$' | Select-Object -First 1
 if ($verMatch) { $ver = $verMatch.Matches[0].Groups[1].Value }
 
-$BEGIN = '# >>> shuo-ren-hua'
-$END   = '# <<< shuo-ren-hua'
+$BEGIN = '# >>> talk-human'
+$END   = '# <<< talk-human'
 
 # 客户端注册表：全局 skills 目录 + 全局 AGENTS.md 路径 + 环境指纹
 $clientTable = [ordered]@{
@@ -35,8 +35,8 @@ $clientTable = [ordered]@{
   zcode    = @{ skills = "$env:USERPROFILE\.zcode\skills";           agents = $null;                                      sniff = { [bool]$env:ZCODE } }
 }
 
-# 目标解析：显式指定 > 环境指纹 > 默认 opencode+claude
-$targets = @($Clients | ForEach-Object { $_.ToLower() })
+# 目标解析：显式指定 > 环境指纹 > 默认 opencode+claude（-File 调用时逗号会被并入单字符串，这里拆开）
+$targets = @($Clients | ForEach-Object { $_ -split ',' } | ForEach-Object { $_.Trim().ToLower() } | Where-Object { $_ })
 if (-not $targets) {
   $detected = @($clientTable.Keys | Where-Object { & $clientTable[$_].sniff })
   if ($detected) { $targets = $detected } else { $targets = @('opencode', 'claude') }
@@ -57,7 +57,7 @@ function Get-BlockRange([string[]]$lines) {
 foreach ($t in $targets) {
   if (-not $clientTable.Contains($t)) { Write-Warning "未知客户端 '$t'，跳过"; continue }
   $cfg = $clientTable[$t]
-  $skillDst = Join-Path $cfg.skills 'shuo-ren-hua'
+  $skillDst = Join-Path $cfg.skills 'talk-human'
 
   if ($Remove) {
     # --- 卸载：删 skill 目录 + 剥离 AGENTS.md 标记块 ---
