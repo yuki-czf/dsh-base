@@ -55,6 +55,7 @@ whenToUse: 项目根存在 .nodes/ 目录；或用户要求建立节点化项目
 
 - **询问制**：登记节点时预判超预算 → 先问用户走 **spec-superflow**（proposal/specs/design/tasks + execution-contract 门禁，重型）还是**本分批约定**（轻量），二选一不混用；用户选定本约定 → 登记同时在 `.nodes/plans/<节点名>.md` 落批次计划（模板 `references/templates/BATCH-PLAN.md`），PROGRESS 状态记 `进行中·批N/M`。
 - **执行纪律**（全文见 `.nodes/PROTOCOL.md`「批次协议」节）：一批一会话（会话标识 `<节点>-b<N>`）；批末必存档且收口固定走 `save.ps1 commit`（lock→CONTEXT→unlock→verify-batch 原子完成，禁止手工拆步）；**完成字样时序**：verify 全 [OK] 前不得在任何档案写入"已完成"表述；超限即断；校准回路回填计划文件。
+- **派活纪律与事故速查**：长 agent 循环重活派强模型、一次委派一个可验收单元；会话异常终止（pseudo-tool-call 等）的识别与处置见 `references/QUICKREF.md` 事故速查节。
 
 ## 跨客户端
 

@@ -39,6 +39,9 @@ yarn-error.log*
 /changes/
 /tmp-zcode-e2e/
 /_diag/
+/.pi/*
+!/.pi/prompts/
 /.opencode/agent/
 /.opencode/plugin/
 node_modules/
+.local/agent-work/

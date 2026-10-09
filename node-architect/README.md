@@ -17,6 +17,8 @@ agent 打开本目录读到 `AGENTS.md`，就会在项目根执行 `install.ps1`
 ├── .opencode\skills\node-architect  ← 联接(junction) → 真源
 ├── .zcode\skills\node-architect     ← 联接 → 真源
 ├── .opencode\command\node-architect.md ← opencode 斜杠命令 /node-architect
+├── .opencode\command\plan-node.md   ← opencode 斜杠命令 /plan-node（claude 落 .claude\commands\）
+├── .pi\prompts\plan-node.md         ← PI-Desktop 斜杠命令 /plan-node（聊天框原生展开）
 ├── .nodes\                          ← 项目档案（协议真源 PROTOCOL.md + 四件套）
 ├── AGENTS.md                        ← 内联五条铁律（所有客户端保底入口）
 └── .gitignore                       ← 联接镜像为生成物，自动忽略
@@ -28,6 +30,8 @@ agent 打开本目录读到 `AGENTS.md`，就会在项目根执行 `install.ps1`
 ⚠ **改 `skill\scripts\*.ps1` 后必查 UTF-8 BOM 仍在**（文件头 EF BB BF）——部分编辑工具写盘会剥 BOM；无 BOM 时 Windows PowerShell 5.1 按 ANSI 解析，脚本内的中文字符串即碎（v1.6.0 实证踩坑）。修复一行：`[IO.File]::WriteAllText($p,[IO.File]::ReadAllText($p,[Text.Encoding]::UTF8),(New-Object Text.UTF8Encoding($true)))`。
 
 存档的机械动作由 `skill\scripts\save.ps1` 承担：`lock` / `unlock`（CONTEXT 写锁，目录锁原子创建，10 分钟超时）、`verify`（存档完整性校验，归档骨架自动生成）、`verify-batch`（批末收口校验）、`save`（lock→CONTEXT 原子替换→unlock→verify 单命令，常规存档用）、`commit`（同前但收口走 verify-batch，批次场景用）、`trim-decisions`（DECISIONS.md 超 200 行时归档旧段）、`next-node`（新节点原子取号：锁内全表扫描取 max+1 并插行，防并发撞号）、`check-tombstone`（压缩后漏补存档检测）。无 PowerShell 的环境用跨平台版 `skill\scripts\save.mjs`（Node.js，功能对等）。命令速查见 `skill\references\QUICKREF.md`。大节点超上下文预算时拆批执行：先按**询问制**向用户二选一（spec-superflow 重型 / 本分批约定轻量，不混用），选定后在 `.nodes\plans\<节点名>.md` 落批次计划，每批一个全新会话，批末固定走 `commit` 收口（详见 `skill\references\PROTOCOL.md`「批次协议」节）。
+
+**/plan-node 斜杠命令**（v1.10.0）：模板在 `skill\commands\plan-node.md`，install 时自动复制到 opencode（`.opencode\command\`）、claude（`.claude\commands\`）与 PI-Desktop（`.pi\prompts\`，聊天框原生展开，宿主扫描 `<项目>\.pi\prompts\*.md`，支持 `$ARGUMENTS`/`$@`/`$1` 占位）的原生命令目录——「扫描空闲节点号 + 把计划登记为计划节点 + 冲突即停」一条命令完成（等价自然语言「使用存档skill扫描空闲节点并把计划存档为计划节点」）。命令与协议**同包同版本**：dist zip 与云端 remote-install 均随 skill 整体分发，不存在只装其一或版本错配；DSH 等无斜杠命令的端用触发语「登记计划节点 <名>」。
 
 ## 一次性引导：让"装节点协议"四个字生效
 
@@ -82,9 +86,10 @@ powershell -ExecutionPolicy Bypass -File <母版路径>\pack.ps1     # 产出 di
 |---|---|---|
 | 任意（保底） | `AGENTS.md` 内联铁律 | 指令文件，会话自动加载 |
 | DSH | `.agents\skills\`（原生扫描，无需镜像） | 技能目录自动发现（已实测） |
-| opencode | 联接镜像 + `/node-architect` 命令 | 技能目录 + 斜杠命令 |
+| PI-Desktop | `.pi\prompts\plan-node.md` + `.agents\skills\` | 聊天框原生斜杠展开 + 技能目录 |
+| opencode | 联接镜像 + `/node-architect` + `/plan-node` 命令 | 技能目录 + 斜杠命令 |
 | zcode | 联接镜像（假定 `.zcode\skills`，待实测） | 技能目录 |
-| claude code | 联接镜像 `.claude\skills` | 技能目录 |
+| claude code | 联接镜像 `.claude\skills` + `/plan-node` 命令 | 技能目录 + 斜杠命令 |
 
 ## 卸载
 

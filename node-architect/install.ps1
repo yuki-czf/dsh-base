@@ -17,6 +17,8 @@ param(
   [switch]$Bootstrap,
   [switch]$Bridge
 )
+# -File invocation passes "a,b" as ONE string (PS 5.1 quirk); normalize to array
+$Clients = @($Clients | ForEach-Object { $_ -split ',' } | ForEach-Object { $_.Trim() } | Where-Object { $_ })
 $ErrorActionPreference = 'Stop'
 $master   = $PSScriptRoot
 $skillSrc = Join-Path $master 'skill'
@@ -186,6 +188,34 @@ description: 节点协议入口：读档恢复 / 存档 / 初始化（协议真�
 '@ | Set-Content -Path $cmdFile -Encoding utf8
     Write-Host "OK: 命令 -> $cmdFile"
   }
+  # plan-node slash command (v1.9.0): template lives in the skill truth source
+  # (skill\commands\plan-node.md); copy verbatim to each client native command dir.
+  if ($cKey -eq 'opencode' -or $cKey -eq 'claude') {
+    $planSrc = Join-Path $canonical 'commands\plan-node.md'
+    if (Test-Path $planSrc) {
+      $planDir  = if ($cKey -eq 'opencode') { Join-Path $Project '.opencode\command' } else { Join-Path $Project '.claude\commands' }
+      New-Item -ItemType Directory -Force -Path $planDir | Out-Null
+      Copy-Item $planSrc (Join-Path $planDir 'plan-node.md') -Force
+      Write-Host "OK: command /plan-node -> $(Join-Path $planDir 'plan-node.md')"
+    } else {
+      Write-Warning "plan-node template missing: $planSrc"
+    }
+  }
+}
+
+# ---------- 3.2) PI-Desktop composer prompts: native slash commands in the chat box ----------
+# PI-Desktop expands "<workspace>/.pi/prompts/*.md" when a message starts with "/"
+# (basename = command name; $ARGUMENTS / $@ / $1 / ${ARGUMENTS:-def} placeholders).
+# Written unconditionally: no reliable env fingerprint, and the file is a tiny
+# project asset (harmless where PI-Desktop is absent; travels with the repo).
+$piPromptSrc = Join-Path $canonical 'commands\plan-node.md'
+if (Test-Path $piPromptSrc) {
+  $piPromptDir = Join-Path $Project '.pi\prompts'
+  New-Item -ItemType Directory -Force -Path $piPromptDir | Out-Null
+  Copy-Item $piPromptSrc (Join-Path $piPromptDir 'plan-node.md') -Force
+  Write-Host "OK: PI-Desktop slash command /plan-node -> $(Join-Path $piPromptDir 'plan-node.md')"
+} else {
+  Write-Warning "plan-node template missing: $piPromptSrc"
 }
 
 # ---------- 3.5) 压缩桥接（可选，-Bridge）：核心随真源分发 + opencode 适配器插件 ----------

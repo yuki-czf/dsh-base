@@ -1,7 +1,7 @@
 ---
 name: node-architect
-version: 1.8.0
-description: 长项目节点存档与恢复协议。项目根存在 .nodes/ 时必须启用：会话开工先读档恢复全貌，节点完成、用户要求存档或大改动落地时写存档。也用于用户说"初始化节点协议、存档、恢复进度、开新节点"时。
+version: 1.10.1
+description: 长项目节点存档与恢复协议。项目根存在 .nodes/ 时必须启用：会话开工先读档恢复全貌，节点完成、用户要求存档或大改动落地时写存档。也用于用户说"初始化节点协议、存档、恢复进度、开新节点、登记计划节点"时。
 whenToUse: 项目根存在 .nodes/ 目录；或用户要求建立节点化项目管理、执行存档、恢复进度。
 ---
 
@@ -24,6 +24,9 @@ whenToUse: 项目根存在 .nodes/ 目录；或用户要求建立节点化项目
 与其他机制的分工：todo = 会话内步骤（活不过压缩）；goal = 跨轮目标锚；**节点 = 项目级存档单元（活在磁盘上）**。
 
 状态：待开始 / 进行中 / 待验收 / 已完成 / 已归档 / 已废弃
+
+## 登记计划节点（/plan-node）
+用户说「登记计划节点 <名>」或使用斜杠命令 `/plan-node <名>` 时：读档 → `save.ps1 next-node` 原子取号（同名/锁忙即停、零写入）→ 计划落 `plans/<名>.md` → `verify` 收口。命令模板在 `commands/plan-node.md`，install 自动装入三端原生命令目录：opencode（`.opencode/command/`）、claude（`.claude/commands/`）、PI-Desktop（`.pi/prompts/`，聊天框原生展开）；冲突四分支语义见 `references/QUICKREF.md`。
 
 ## 存档流程（checkpoint）
 
