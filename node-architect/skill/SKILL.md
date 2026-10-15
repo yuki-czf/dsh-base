@@ -1,6 +1,6 @@
 ---
 name: node-architect
-version: 1.11.0
+version: 1.12.1
 description: 长项目节点存档与恢复协议。项目根存在 .nodes/ 时必须启用：会话开工先读档恢复全貌，节点完成、用户要求存档或大改动落地时写存档。也用于用户说"初始化节点协议、存档、恢复进度、开新节点、登记计划节点"时。
 whenToUse: 项目根存在 .nodes/ 目录；或用户要求建立节点化项目管理、执行存档、恢复进度。
 ---
@@ -17,6 +17,14 @@ whenToUse: 项目根存在 .nodes/ 目录；或用户要求建立节点化项目
 4. **体积纪律（v1.7.0 硬闸门）**：`CONTEXT.md` ≤60 行且每行 ≤6000 字符；`PROGRESS.md` 表格行 ≤600 字符；`DECISIONS.md` ≤200 行。超限时 `save`/`commit` 被 **exit 4 拦截**（10 分钟内同命令重跑放行一次）——按提示跑 `trim-context` / `trim-progress` / `trim-decisions` 滚出到 `archive/` 后重存。细节一律写 `archive/<节点>.md`，核心文件只留一句话状态。
 5. **发现即恢复**：感知到上下文被压缩（出现摘要标记、记忆断裂）→ 立即重读 `CONTEXT.md`、`PROGRESS.md` 和本会话的 `SESSIONS/` 文件，再继续工作。
 
+## 效率条款（弱模型/Flash 级必守）
+
+- **独立工具调用同一批并行发出**：读档 CONTEXT+PROGRESS 一批；验证合并跑项目根 `scripts/gate.ps1`（ruff + vue-tsc 触碰过滤 + vitest/pytest 单命令，自管 UTF-8，杜绝乱码与串行空转）。
+- **脚本路径照抄，禁搜索定位**：`powershell -File .agents/skills/node-architect/scripts/save.ps1 …`（点目录 Glob/Grep 不可见，搜了是白跑）。
+- **失败先查退出码语义**（QUICKREF 退出码表）：exit 4 → 跑 trim-* 后重跑；**空输出 ≠ 成功**，禁止换姿势盲重试。
+- **体积闸门由脚本自动检查**，禁止手工跑行宽/行数检查（多余且输出易乱码）。
+- **收口复审强制委派（v1.12.1）**：节点行带 `委派:收口独立复审` 且有新代码——收口前必须派复审子代理（或写豁免理由），verify 软校验复审留痕兜底；常规实施（1-3 文件）自干，大范围只读探索/无共享文件并行批才另行委派（决策表见 AGENTS.md）。
+
 ## 节点定义
 
 节点 = **一个可验收的交付物**（"跑通登录流程"），不是任务清单（"写三个函数"）。边界由你提议、用户一句话确认。
@@ -31,6 +39,16 @@ whenToUse: 项目根存在 .nodes/ 目录；或用户要求建立节点化项目
 ## 存档流程（checkpoint）
 
 按顺序执行；**完成字样时序**：verify 全 [OK] 之前，任何档案不得写入"已完成"类表述。
+
+**快路（推荐，弱模型必走）**：写好 CONTEXT 暂存文件后，一条命令完成全部存档动作（PROGRESS 行状态/日期 + SESSIONS 追加 + DECISIONS 追加 + CONTEXT 替换 + verify）：
+
+```
+save.ps1 finish -Node <节点名> -Session <会话> -Status "<状态短语>" -ContextFile <暂存文件> [-Note "..."] [-Decision "<决策标题>"] [-Recon "..."] [-Completed]
+```
+
+`-Decision` 按项目惯例自动编号 `## 日期 #<节点号> 标题`（多 bullet 的复杂决策请先手工追加完整段落，finish 省略 `-Decision`）；`-Completed` 用于节点完成收口（校验 `archive/<节点名>.md`，先写归档再加此参）。幂等可重跑。
+
+**手工五步（参考路径，批次/复杂归档用）**：
 
 1. **PROGRESS.md**：定向 edit 该节点行（状态、更新时间）
 2. **SESSIONS/<会话>.md**：重写本会话状态

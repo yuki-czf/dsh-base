@@ -10,6 +10,7 @@
  *   node save.mjs verify --node "Run login flow" --session main [--completed]
  *   node save.mjs verify-batch --node "Run login flow" --session main --batch 2
  *   node save.mjs checkpoint --node "Run login flow" --session main [--recon "..."] [--note "..."]
+ *   node save.mjs finish --node "Run login flow" --session main --status "..." --context-file ctx-tmp.md [--note "..."] [--decision "..."] [--recon "..."]
  *   node save.mjs review-audit [--over 14]
  *   node save.mjs next-node --node "Name" [--accept "..."] [--session main]
  *   node save.mjs check-tombstone
@@ -52,7 +53,7 @@ const TIMEOUT_MIN = 10;
 // ---------- Validation ----------
 if (!existsSync(nodesDir)) { console.error(`Not found: ${nodesDir} (run init-nodes first)`); process.exit(1); }
 
-const VALID_ACTIONS = ['lock', 'unlock', 'verify', 'verify-batch', 'commit', 'save', 'checkpoint', 'review-audit', 'check-tombstone', 'trim-decisions', 'trim-context', 'trim-progress', 'next-node'];
+const VALID_ACTIONS = ['lock', 'unlock', 'verify', 'verify-batch', 'commit', 'save', 'finish', 'checkpoint', 'review-audit', 'check-tombstone', 'trim-decisions', 'trim-context', 'trim-progress', 'next-node'];
 if (!VALID_ACTIONS.includes(action)) {
   console.error(`Usage: node save.mjs <${VALID_ACTIONS.join('|')}> [options]`);
   process.exit(1);
@@ -87,6 +88,12 @@ if (action === 'checkpoint') {
 if (action === 'next-node') {
   if (!node) die('next-node requires --node <name>');
 }
+if (action === 'finish') {
+  if (!node) die('finish requires --node');
+  if (!getArg('status', '')) die('finish requires --status "<new PROGRESS status text>"');
+  if (!contextFile) die('finish requires --context-file');
+  if (getArg('status', '').includes('|')) die('--status must not contain the pipe character (would break the PROGRESS table row)');
+}
 
 function die(msg) { console.error(`[FAIL] ${msg}`); process.exit(1); }
 
@@ -99,7 +106,11 @@ function writeUtf8(path, content) {
   writeFileSync(path, content, 'utf-8');
 }
 function today() {
-  return new Date().toISOString().slice(0, 10);
+  // Local date (NOT toISOString/UTC): UTC+8 users running finish between
+  // 00:00-08:00 would otherwise stamp PROGRESS/DECISIONS with yesterday.
+  const d = new Date();
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 function nowStamp() {
   const d = new Date();
@@ -677,9 +688,109 @@ if (action === 'commit') {
   process.exit(verifyBatch(node, session, parseInt(batch, 10)) > 0 ? 1 : 0);
 }
 
+// ---------- finish (v1.12.0): one-shot archive close ----------
+// Locate PROGRESS row -> projected cap check -> PROGRESS row status/date update
+// (locked) -> SESSIONS append -> DECISIONS append -> falls through to the save
+// path below (cap gate + CONTEXT replace + verify). Re-run safe: idempotent steps.
+if (action === 'finish') {
+  const statusTxt = getArg('status', '');
+  const decision = getArg('decision', '');
+  const recon = getArg('recon', '');
+  const note = getArg('note', '');
+  const ctxSrc = isAbsolute(contextFile) ? contextFile : join(project, contextFile);
+  if (!existsSync(ctxSrc)) die(`ContextFile not found: ${ctxSrc}`);
+  const ctxDst = join(nodesDir, 'CONTEXT.md');
+  if (resolve(ctxSrc) === resolve(ctxDst)) die('ContextFile must not be CONTEXT.md itself');
+
+  // -- locate the PROGRESS row (read-only): node number feeds the DECISIONS heading --
+  const progPathF = join(nodesDir, 'PROGRESS.md');
+  const rawF = readUtf8(progPathF);
+  if (!rawF) die('PROGRESS.md not found');
+  const linesF = rawF.split(/\r?\n/);
+  const hitsF = [];
+  for (let i = 0; i < linesF.length; i++) {
+    if (/^\|/.test(linesF[i]) && linesF[i].includes(node)) hitsF.push(i);
+  }
+  if (hitsF.length === 0) die(`no PROGRESS.md row contains node '${node}'`);
+  if (hitsF.length > 1) die(`node '${node}' matches ${hitsF.length} PROGRESS.md rows - pass the full unique node name`);
+  const cellsF = linesF[hitsF[0]].split('|');
+  if (cellsF.length !== 8) die(`PROGRESS.md row for '${node}' is not the strict 6-column format (embedded pipe? got ${cellsF.length - 2} columns) - update it manually`);
+  const nodeNumF = cellsF[1].trim();
+
+  // -- build the projected PROGRESS row (in-memory, BEFORE cap pre-check) --
+  cellsF[4] = ` ${statusTxt} `;
+  cellsF[6] = ` ${today()} `;
+  linesF[hitsF[0]] = cellsF.join('|');
+  const progProjF = linesF.join('\r\n').trimEnd() + '\r\n';
+
+  // -- projected DECISIONS (project convention: '## YYYY-MM-DD #<node> title') --
+  // Idempotent: if the exact title line already exists (interrupted re-run), skip.
+  const decPathF = join(nodesDir, 'DECISIONS.md');
+  let decProjF = readUtf8(decPathF);
+  let decDupF = false;
+  if (decision) {
+    if (decProjF === null) die('DECISIONS.md not found');
+    const decTitleF = `## ${today()} #${nodeNumF} ${decision}`;
+    if (decProjF.includes(decTitleF)) {
+      decDupF = true;
+    } else {
+      decProjF = decProjF.trimEnd() + `\n\n${decTitleF}\n`;
+    }
+  }
+
+  // -- pre-flight cap gate on projected ledgers: fail BEFORE any mutation (exit 4) --
+  const violF = (() => { try { return getCapViolations(readUtf8(ctxSrc), progProjF, decProjF); } catch { return []; } })();
+  if (violF.length > 0) {
+    for (const x of violF) console.error(`[FAIL] Cap gate: ${x.file} [${x.code}] ${x.detail}`);
+    console.error('       Fix: run trim-context / trim-progress / trim-decisions, then re-run finish. ContextFile preserved.');
+    process.exit(4);
+  }
+
+  // -- PROGRESS row update: status + date cells only, under lock --
+  // No process.exit() inside try: exit would skip finally and leak the lock.
+  let lockedF = false;
+  let lastMsgF = '';
+  for (let i = 0; i < 30; i++) {
+    const r = acquireLock(session);
+    if (r.ok) { lockedF = true; break; }
+    lastMsgF = r.msg;
+    sleepSync(1000);
+  }
+  if (!lockedF) { console.error(`[FAIL] Lock busy after 30s: ${lastMsgF} - nothing mutated. Re-run finish.`); process.exit(1); }
+  try {
+    writeUtf8(progPathF, progProjF);
+    console.log(`OK: PROGRESS row #${nodeNumF} '${node}' status/date updated`);
+  } finally {
+    releaseLock(session);
+  }
+
+  // -- SESSIONS append (lockless, checkpoint-style) --
+  const sessDirF = join(nodesDir, 'SESSIONS');
+  if (!existsSync(sessDirF)) mkdirSync(sessDirF, { recursive: true });
+  const sessPathF = join(sessDirF, `${session}.md`);
+  const prevF = readUtf8(sessPathF);
+  const bodyF = (prevF === null ? `# 会话 ${session} 状态\n` : prevF).trimEnd();
+  const partsF = [`- [finish ${nowStamp()}] node=${node} status=${statusTxt}`];
+  if (recon) partsF.push(`侦察=${recon}`);
+  if (note) partsF.push(`note=${note}`);
+  writeUtf8(sessPathF, `${bodyF}\n${partsF.join(' · ')}\n`);
+  console.log(`OK: SESSIONS/${session}.md updated (finish marker)`);
+
+  // -- DECISIONS append (append-only, lockless; idempotent skip when already present) --
+  if (decision) {
+    if (!decDupF) {
+      writeUtf8(decPathF, decProjF.trimEnd() + '\n');
+      console.log(`OK: DECISIONS.md appended entry for #${nodeNumF}`);
+    } else {
+      console.log(`OK: DECISIONS.md entry for #${nodeNumF} already present (idempotent skip)`);
+    }
+  }
+  console.log('OK: ledger writes complete - falling through to CONTEXT replace + verify');
+}
+
 // ---------- save (one-shot non-batch) ----------
 let actionForVerify = action;
-if (action === 'save') {
+if (action === 'save' || action === 'finish') {
   const ctxSrc = isAbsolute(contextFile) ? contextFile : join(project, contextFile);
   if (!existsSync(ctxSrc)) die(`ContextFile not found: ${ctxSrc}`);
   const ctxDst = join(nodesDir, 'CONTEXT.md');
@@ -739,6 +850,27 @@ if (actionForVerify === 'verify' || action === 'verify') {
     const hasRecon = sessTxt.split(/\r?\n/).some(l => l.includes(node) && l.includes('侦察'));
     if (!hasRecon) {
       console.log(`  [WARN] No recon marker for node '${node}' in SESSIONS/${session}.md — run: node save.mjs checkpoint --node <N> --session <S> --recon "..." (efficiency protocol)`);
+    }
+  }
+
+  // v1.12.1 delegation gate: review-delegated node reaching done status needs a
+  // review trace in SESSIONS (soft WARN, same as the recon marker).
+  if (node && existsSync(progPath) && existsSync(sessPath)) {
+    const progTxtDg = readUtf8(progPath) || '';
+    let statusDoneDg = false;
+    for (const dl of progTxtDg.split(/\r?\n/)) {
+      if (/^\|/.test(dl) && dl.includes(node) && /委派:\s*收口独立复审/.test(dl)) {
+        const cellsDg = dl.split('|');
+        if (cellsDg.length >= 8 && /(实施完成|已验收|已收口)/.test(cellsDg[4])) statusDoneDg = true;
+        break;
+      }
+    }
+    if (statusDoneDg) {
+      const sessTxtDg = readUtf8(sessPath) || '';
+      const hasReview = sessTxtDg.split(/\r?\n/).some(l => l.includes(node) && l.includes('复审'));
+      if (!hasReview) {
+        console.log(`  [WARN] Delegation gate: node '${node}' carries the review-delegation marker and its status is done, but SESSIONS/${session}.md has no review trace for it. Delegate the close-out review (e.g. code-reviewer subagent) and log the verdict, or write an explicit exemption reason. (v1.12.1)`);
+      }
     }
   }
 

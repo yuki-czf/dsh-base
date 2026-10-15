@@ -57,6 +57,12 @@ init-nodes.ps1 [-Project <项目根>]
 
 > 母版与节点行永不写工具专名——换端/工具改版零维护；多会话分工（planner 终审等）仅由用户显式安排。
 
+## 委派传导与简报四要素（v1.12.1）
+
+- **登记（planner）时**：节点行带 `委派:` 标记的，必须同步把委派点展开为指令写进 execution-contract 收口段——角色+复审清单+简报四要素，不许只留台账行。
+- **简报四要素**（flash 级子代理不能推断，缺一必跑偏）：①目标一句话 ②涉改文件路径清单 ③边界禁区（不许动什么）④报告格式（APPROVE 或逐条问题清单）。
+- **收口闸门**：`finish`/`verify` 软校验——`委派:收口独立复审` 节点状态列为实施完成/已验收/已收口类而 SESSIONS 无该节点复审留痕 → WARN（豁免须在 SESSIONS 写明理由）。
+
 ## 事故速查（会话异常终止：pseudo-tool-call）
 - **指纹**：模型正文出现 `call:xxx{...}` 文本 + 工具实际未执行 + 任务清单停在 0-N 不动；同会话前后工具步正常 = 模型把工具调用写成正文（模型侧偶发失误，非渠道/配置问题——能写出准确工具名即证明工具定义已送达）。
 - **定责**：① 查同会话前后工具步 ② 最小探针（让模型只调一次工具）③ 换思考档对照。
@@ -76,6 +82,8 @@ init-nodes.ps1 [-Project <项目根>]
 | `save.ps1 verify-batch -Node <节点名> -Session <会话> -Batch <N>` | 批末存档校验（批次状态 + 计划侦察/校准回填检查） |
 | `save.ps1 commit -Node <节点名> -Session <会话> -Batch <N> -ContextFile <暂存文件>` | 原子收口（lock→CONTEXT→unlock→verify-batch 一条命令） |
 | `save.ps1 save -Node <节点名> -Session <会话> -ContextFile <暂存文件> [-Completed]` | 一键存档（lock→CONTEXT→unlock→verify 一条命令，非批次场景） |
+| `save.ps1 finish -Node <节点名> -Session <会话> -Status "<状态>" -ContextFile <暂存> [-Note "..."] [-Decision "<标题>"] [-Recon "..."] [-Completed]` | **一键收口（v1.12.0 推荐）**：PROGRESS 行状态/日期（锁内、仅动这两列）+SESSIONS 追加+DECISIONS 追加（自动编号 `## 日期 #<节点号> 标题`）+CONTEXT 替换+verify 一条命令；幂等可重跑；exit 4=预检体积闸门（暂存保留） |
+| 项目根 `scripts/gate.ps1 -PyFiles <backend文件> [-Pytest <路径>] [-TsFiles <frontend文件>] [-Vitest <路径>]` | **门禁一条命令**：ruff（--no-cache）+pytest 定向+vue-tsc（-b --force 输出过滤到触碰文件）+vitest 合并跑，自管 UTF-8；末尾汇总表，exit 0=全过 |
 | `save.ps1 next-node -Node <名称> [-Accept <验收>] [-Session <会话>]` | 新节点原子取号：锁内全表扫描 → max+1 → 表头下插行（ticket-server 模式，防并发撞号） |
 | `save.ps1 check-tombstone` | 检查压缩后是否漏补存档（退出码 3 = 有告警） |
 | `save.ps1 trim-decisions [-Keep <N>]` | 剪切旧决策到 archive/（默认保留最近 20 条；v1.7.0 行数感知=自动减条数保 DECISIONS ≤200 行） |
@@ -89,6 +97,7 @@ init-nodes.ps1 [-Project <项目根>]
 - **每窗一拦**：拦截写 marker `.nodes/.cap-nudge`（违规指纹），10 分钟内同指纹重跑放行只 WARN——不锁死会话。
 - **fail-open**：除超限外的任何异常（文件缺失/解析失败）不阻塞存档。
 - 常态写法：核心文件写短（节点行只留一句话状态），细节直接写 `archive/<节点>.md`。
+- 禁止手工跑行宽/行数检查（脚本已自动检查；手工检查在 PS5.1 下输出易 GBK 乱码，白跑一轮）。
 
 ## 退出码
 
@@ -97,9 +106,19 @@ init-nodes.ps1 [-Project <项目根>]
 | 0 | 成功 / 校验全过 |
 | 1 | 失败（锁竞争 / 校验未过） |
 | 3 | 告警（墓碑检查发现疑似断链；review-audit 发现超期待验收节点） |
-| 4 | 体积闸门拦截（核心档案超硬上限；按提示 trim 后重跑，10 分钟内重跑同命令自动放行） |
+| 4 | 体积闸门拦截（核心档案超硬上限；按提示 trim 后重跑，10 分钟内重跑同命令自动放行——**finish 的预检拦截除外，无放行机制，必须 trim 后重跑**） |
 
 ## 常规存档速查步骤
+
+**快路（v1.12.0 推荐）**：
+
+```
+1. write 暂存文件 → CONTEXT.md 新全文
+2. save.ps1 finish -Node <节点名> -Session <会话> -Status "<状态>" -ContextFile <暂存>
+   （=手工步骤 1-4+6 一条命令；节点完成先写 archive/<节点>.md 再加 -Completed）
+```
+
+**手工五步（参考路径）**：
 
 ```
 1. edit  PROGRESS.md    → 更新节点行
