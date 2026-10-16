@@ -1,5 +1,6 @@
 ---
 name: pi-tempo
+version: 1.0.0
 description: PI-Desktop 里的**执行节奏纪律**（pi-tempo 体系）——把「时间＝模型往返次数 × 每次等待」当第一性原理，系统性地压掉白往返。含十节：① Edit 行操作语法与「写入后必须重新 Read 拿新 tag」② Bash 超时必须显式传 timeout ③ 按退出码判成败（npm warn/DeprecationWarning/browserslist 噪声不是失败）④ 临时脚本先 node --check ⑤ 验证节奏＝最小子集再全量 ⑥ 先 Grep 定位再 Read 精确窗口、且**重复读是最大隐性开销** ⑦ Glob/Grep 参数必填 ⑧ 往返预算（读档一次并发、同一文件一次读够、独立调用同批发出、预告每批一行）⑨ 多任务切分与并行派发（先证明文件集不相交、契约冻结、共享文件单 owner、越界检查、规模过大就拆批）⑩ 子代理依赖调度（主线程当调度器、fan-in 收口）。当准备调用 Edit/Write/Bash 工具、当工具调用报错需要重试、当决定如何验证改动、当执行变慢/往返太多需要提速、或当要把一个任务拆成多个并行子任务派给 subagent 时使用。Use before editing files or running shell commands, when a tool call fails and you retry, when choosing how to verify a change, when execution feels slow, or when splitting work into parallel subagent tasks.
 ---
 

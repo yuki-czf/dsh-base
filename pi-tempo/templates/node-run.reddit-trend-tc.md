@@ -3,6 +3,8 @@ description: 执行节点：先加载节点协议与工具纪律 skill，再读�
 argument-hint: <节点编号或名称> [补充要求]
 ---
 
+<!-- pi-tempo v1.0.0 · 2026-10-16 · 与 skill 同版；改 skill 后同步本模板并递增此行 -->
+
 # /node-run — 执行节点
 
 目标节点与补充要求：$ARGUMENTS

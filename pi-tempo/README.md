@@ -50,4 +50,5 @@ node "$env:USERPROFILE\.agents\skills\pi-tempo\analyze.mjs"
 
 ## 版本
 
-- 2026-10-16：v1 收口。skill 15,365 B / 模板 lab 12,998 B / 模板 reddit-trend-tc 15,793 B。
+- **v1.0.0**（2026-10-16）：skill 15,380 B（frontmatter 加 `version`）/ 模板 lab 13,106 B / 模板 reddit-trend-tc 15,899 B。
+- **版本号唯一真源 = `skill/SKILL.md` frontmatter 的 `version`**；两份模板各有 `<!-- pi-tempo vX -->` 注释行可 grep 校验。三处版本必须一致，改 skill 后同步模板并递增。
