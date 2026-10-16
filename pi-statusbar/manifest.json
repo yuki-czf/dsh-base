@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "id": "local.pi-statusbar",
+  "name": "PI Statusbar",
+  "version": "0.8.1",
+  "description": "Composer statusbar in the DSH/ZCode 口径: turn-pooled decode speed (the same scope as the speed capsule and the usage popover), first-token latency, current-turn/session/today generated tokens — from the read-only usage contract. While streaming, the headline switches to a live rate (exact usage deltas, or a ≈ DOM-growth estimate). Counters only, no network.",
+  "author": "local",
+  "main": "main.js",
+  "renderer": "renderer.js",
+  "rendererActions": ["plugin.call"],
+  "rendererCallMethods": ["statusbar", "report"],
+  "permissions": ["renderer.extension", "usage.read"],
+  "contributes": {
+    "commands": [
+      {
+        "id": "pi-statusbar.explain",
+        "title": "PI Statusbar: 速度明细",
+        "keywords": ["statusbar", "speed", "tps", "ttft", "状态条", "速度", "生成速度"]
+      }
+    ]
+  },
+  "engines": {
+    "piDesktop": ">=0.19.0"
+  },
+  "activationEvents": ["onStartup"]
+}
