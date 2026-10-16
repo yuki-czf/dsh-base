@@ -1,0 +1,51 @@
+﻿# gemini-3.8-flash 体检（PI-Desktop）  2026-10-16
+sessions=47 turns=128 {"error":13,"completed":109,"aborted":6}
+completed 平均墙钟=923s 最长=9083s  token in=118570807 out=1568229
+messages=16265 toolMessages=8062 toolErrors=1050
+
+## 工具调用 / 错误率
+  Bash                       calls= 2094 errors=  826 39.4%
+  Edit                       calls= 1153 errors=  145 12.6%
+  Read                       calls= 3028 errors=   25 0.8%
+  Glob                       calls=  348 errors=   24 6.9%
+  plugin_pi_browser_Browser  calls=  162 errors=   12 7.4%
+  TodoWrite                  calls=  265 errors=    8 3.0%
+  Grep                       calls=  613 errors=    6 1.0%
+  Skill                      calls=   20 errors=    1 5.0%
+  Task                       calls=   10 errors=    1 10.0%
+  read                       calls=    1 errors=    1 100.0%
+  edit                       calls=    1 errors=    1 100.0%
+  SubmitPlan                 calls=    3 errors=    0 0.0%
+  ToolSearch                 calls=   43 errors=    0 0.0%
+  Write                      calls=  305 errors=    0 0.0%
+  SubmitGoal                 calls=    1 errors=    0 0.0%
+  BrowserPreview             calls=    1 errors=    0 0.0%
+  TaskWait                   calls=   13 errors=    0 0.0%
+  TaskList                   calls=    1 errors=    0 0.0%
+
+## Edit 失败码
+   110  EDIT_PARSE_FAILED
+    17  EDIT_LINES_UNSEEN
+     9  EDIT_TAG_MISMATCH
+     2  EDIT_RANGE_INVALID
+     2  EDIT_NO_CHANGE
+     2  EDIT_TAG_UNKNOWN
+     1  EDIT_LEGACY_MATCH_FAILED
+     1  unknown
+     1  INVALID_ARGUMENT
+
+## Bash 失败分桶
+   221  stderr 噪声(npm/deprecation)
+   210  测试失败(真实信号)
+   149  其他(exit=1)
+    58  TOOL_TIMEOUT(>60s)
+    46  类型检查错误(真实信号)
+    41  其他(exit=2)
+    32  grep/条件未命中(正常)
+    26  依赖/环境缺失
+    20  临时脚本语法错误
+     9  命令敲错/未安装
+     8  路径不存在
+     2  其他(exit=?)
+     2  其他(exit=-1)
+     2  其他(exit=4)
