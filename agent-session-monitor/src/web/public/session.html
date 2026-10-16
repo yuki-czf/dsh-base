@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>会话详情 · AI Agent 会话监控</title>
+<style>
+:root { --bg:#0f1115; --card:#171a21; --line:#262b36; --text:#e6e9ef; --dim:#8b93a3;
+  --blue:#4da3ff; --green:#3fbf7f; --red:#ff6b6b; --yellow:#ffc53d; --orange:#ff9a3d; --grey:#5b6472; }
+*{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--text);font:14px/1.6 system-ui,-apple-system,"Segoe UI",sans-serif}
+header{padding:12px 18px;border-bottom:1px solid var(--line);display:flex;gap:10px;align-items:center}
+a.back{color:var(--blue);text-decoration:none;font-size:13px}
+main{padding:16px 18px 60px;max-width:900px;margin:0 auto}
+h1{font-size:17px;margin:0 0 4px}
+.meta{color:var(--dim);font-size:13px;margin-bottom:14px}
+table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:hidden;margin-bottom:18px}
+th,td{padding:8px 12px;border-bottom:1px solid var(--line);text-align:left;font-size:13px}
+th{color:var(--dim);font-weight:500;background:#1b1f28}
+tr:last-child td{border-bottom:none}
+.excerpt{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 14px;white-space:pre-wrap;font-size:13px}
+h3{font-size:13px;color:var(--dim);margin:18px 0 8px}
+.s-running{color:var(--blue)}.s-completed{color:var(--green)}.s-idle{color:var(--dim)}
+.s-error,.s-crashed{color:var(--red)}.s-stuck{color:var(--yellow)}.s-blocked{color:var(--orange)}
+.s-cancelled{color:var(--grey)}
+@media(max-width:640px){.hide-mobile{display:none}}
+</style>
+</head>
+<body>
+<header><a class="back" href="/" id="back">← 返回面板</a></header>
+<main><div id="content" class="meta">加载中…</div></main>
+<script>
+const qs = new URLSearchParams(location.search);
+const TOKEN = qs.get('token') || '';
+document.getElementById('back').href = '/?token=' + encodeURIComponent(TOKEN);
+const parts = location.pathname.split('/').filter(Boolean); // session/<tool>/<id>
+const tool = decodeURIComponent(parts[1] || '');
+const sid = decodeURIComponent(parts[2] || '');
+const STATUS_ICON = { running:'🔵', idle:'⚪', completed:'✅', error:'❌', cancelled:'🚫', stuck:'⏳', crashed:'💥', blocked:'🟠', offline:'⚫' };
+function fmtTs(ms){ return ms ? new Date(ms).toLocaleString() : '-'; }
+function fmtDur(s,e){ if(!s||!e) return '-'; const sec=Math.max(0,Math.round((e-s)/1000)); if(sec<60) return sec+' 秒'; const m=Math.floor(sec/60); if(m<60) return m+' 分 '+(sec%60)+' 秒'; return Math.floor(m/60)+' 时 '+(m%60)+' 分'; }
+function esc(s){ const d=document.createElement('div'); d.textContent=s??''; return d.innerHTML; }
+async function load(){
+  const res = await fetch(`/api/sessions/${encodeURIComponent(tool)}/${encodeURIComponent(sid)}?token=${encodeURIComponent(TOKEN)}`);
+  if (res.status === 404) { document.getElementById('content').textContent = '会话不存在或超出历史范围'; return; }
+  if (res.status === 401) { document.getElementById('content').innerHTML = '🔒 未授权，请带 <code>?token=</code> 访问'; return; }
+  const s = await res.json();
+  let html = `<h1>${esc(s.title)}</h1>
+  <div class="meta">📁 ${esc(s.projectName)} · 工具 ${esc(s.tool)} · 状态 <span class="s-${esc(s.status)}">${STATUS_ICON[s.status]||''} ${esc(s.status)}</span> · 模型 ${esc(s.model||'-')} · Token ${s.totalTokens??'-'}${s.delegationDepth?' · 委派深度 '+s.delegationDepth:''}</div>
+  <div class="meta">开始 ${fmtTs(s.startedAt)} · 最近活动 ${fmtTs(s.lastTurnAt)}</div>
+  <h3>回合列表（${s.turns?.length ?? 0}）</h3><table><thead><tr><th>回合</th><th>状态</th><th>开始</th><th class="hide-mobile">结束</th><th class="hide-mobile">耗时</th><th class="hide-mobile">Token</th><th class="hide-mobile">错误</th></tr></thead><tbody>`;
+  for (const [i,t] of (s.turns||[]).entries()) {
+    html += `<tr><td>${i+1}</td><td class="s-${esc(t.status)}">${STATUS_ICON[t.status]||'•'} ${esc(t.status)}</td>
+    <td>${fmtTs(t.startedAt)}</td><td class="hide-mobile">${fmtTs(t.endedAt)}</td>
+    <td class="hide-mobile">${fmtDur(t.startedAt,t.endedAt)}</td><td class="hide-mobile">${t.tokens??'-'}</td>
+    <td class="hide-mobile">${esc(t.errorCode||'-')}</td></tr>`;
+  }
+  html += '</tbody></table>';
+  if (s.lastAssistantExcerpt) html += `<h3>最后回复（前 2000 字）</h3><div class="excerpt">${esc(s.lastAssistantExcerpt.slice(0,2000))}</div>`;
+  document.getElementById('content').innerHTML = html;
+}
+load();
+</script>
+</body>
+</html>

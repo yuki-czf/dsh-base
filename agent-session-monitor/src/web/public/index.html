@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI Agent 会话监控</title>
+<style>
+:root { --bg:#0f1115; --card:#171a21; --line:#262b36; --text:#e6e9ef; --dim:#8b93a3;
+  --blue:#4da3ff; --green:#3fbf7f; --red:#ff6b6b; --yellow:#ffc53d; --orange:#ff9a3d; --grey:#5b6472; }
+* { box-sizing:border-box; }
+body { margin:0; background:var(--bg); color:var(--text); font:14px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif; }
+header { padding:14px 18px; display:flex; flex-wrap:wrap; gap:10px; align-items:center; border-bottom:1px solid var(--line); position:sticky; top:0; background:var(--bg); z-index:2; }
+h1 { font-size:16px; margin:0 8px 0 0; }
+.health { display:flex; gap:8px; flex-wrap:wrap; margin-left:auto; font-size:12px; }
+.dot { display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:4px; }
+main { padding:14px 18px 60px; max-width:1100px; margin:0 auto; }
+.proj { margin-bottom:18px; }
+.proj h2 { font-size:13px; color:var(--dim); margin:0 0 6px; font-weight:600; letter-spacing:.4px; }
+table { width:100%; border-collapse:collapse; background:var(--card); border:1px solid var(--line); border-radius:10px; overflow:hidden; }
+th,td { padding:9px 12px; text-align:left; border-bottom:1px solid var(--line); font-size:13px; }
+th { color:var(--dim); font-weight:500; background:#1b1f28; }
+tr:last-child td { border-bottom:none; }
+tr:hover td { background:#1c202a; }
+.badge { font-size:11px; padding:2px 7px; border-radius:20px; border:1px solid var(--line); color:var(--dim); }
+a { color:inherit; text-decoration:none; }
+a.title:hover { color:var(--blue); }
+.s-running{color:var(--blue)} .s-completed{color:var(--green)} .s-idle{color:var(--dim)}
+.s-error,.s-crashed{color:var(--red)} .s-stuck{color:var(--yellow)} .s-blocked{color:var(--orange)}
+.s-cancelled{color:var(--grey)} .s-offline{color:var(--grey)}
+.warn { background:#3a2b12; border:1px solid #6b4a14; color:#ffcf7d; padding:8px 12px; border-radius:8px; margin-bottom:14px; font-size:13px; display:none; }
+.muted { color:var(--dim); }
+footer { position:fixed; bottom:0; left:0; right:0; padding:6px 18px; font-size:11px; color:var(--dim); background:var(--bg); border-top:1px solid var(--line); }
+@media (max-width:640px){ th,td{padding:7px 8px} .hide-mobile{display:none} }
+</style>
+</head>
+<body>
+<header>
+  <h1>📋 AI Agent 会话监控</h1>
+  <span class="muted" id="updatedAt"></span>
+  <div class="health" id="health"></div>
+</header>
+<main>
+  <div class="warn" id="breaker">⚠️ 飞书通知已熔断（连续发送失败）。请检查 webhook 配置后重启服务。</div>
+  <div id="content" class="muted">加载中…</div>
+</main>
+<footer>每 5 秒自动刷新 · agent-session-monitor</footer>
+<script src="/app.js"></script>
+</body>
+</html>
