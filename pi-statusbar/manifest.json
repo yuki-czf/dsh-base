@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "local.pi-statusbar",
   "name": "PI Statusbar",
-  "version": "0.9.0",
+  "version": "0.9.1",
   "description": "Composer statusbar in the DSH/ZCode 口径: turn-pooled decode speed (the same scope as the speed capsule and the usage popover), first-token latency, current-turn/session/today generated tokens — from the read-only usage contract. While streaming, the headline switches to a live rate (exact usage deltas, or a ≈ DOM-growth estimate). Counters only, no network.",
   "author": "local",
   "main": "main.js",

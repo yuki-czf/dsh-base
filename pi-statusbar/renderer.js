@@ -780,6 +780,7 @@ function liveState() {
     thinkWatch.active = false;
   }
   if (thinkWatch.active) thinkWatch.elapsedMs = now - thinkWatch.startAt;
+  const flight = newestInFlight();
   live.flightGen = flight ? flight.gen : null;
   if (!flight) {
     if (est !== null) {
