@@ -724,6 +724,8 @@ function newestInFlight() {
   return flight;
 }
 
+/* 思考秒表状态：盯最后一个 thinking 块的长度变化。len=-1 = 未播种。 */
+const thinkWatch = { el: null, len: -1, at: 0, startAt: 0, elapsedMs: 0, active: false };
 function liveState() {
   const now = Date.now();
   // Sample the transcript's text growth EVERY poll, flight or not — on
@@ -749,7 +751,35 @@ function liveState() {
       hub.transcriptNode = null; // node left the DOM — the next scan re-finds one
     }
   }
-  const flight = newestInFlight();
+  // 思考秒表：最后一个 thinking 块在长 = 思考进行中。起点=从静止恢复增长的时刻；
+  // 停增 8s 视为思考结束（短暂 markdown 抖动不断表）。len=-1 = 未播种，首采样只记录。
+  try {
+    const thinkNodes = document.querySelectorAll('[class*="think" i]');
+    const lastThink = thinkNodes.length ? thinkNodes[thinkNodes.length - 1] : null;
+    if (lastThink && lastThink.isConnected) {
+      const tLen = lastThink.textContent.length;
+      if (thinkWatch.len < 0) {
+        thinkWatch.len = tLen;
+      } else {
+        const grew = tLen - thinkWatch.len;
+        if (grew > 8) {
+          if (!thinkWatch.active) {
+            thinkWatch.active = true;
+            thinkWatch.startAt = now;
+          }
+          thinkWatch.at = now;
+        } else if (thinkWatch.active && now - thinkWatch.at > 8000) {
+          thinkWatch.active = false;
+        }
+      }
+      thinkWatch.len = tLen;
+    } else {
+      thinkWatch.active = false;
+    }
+  } catch {
+    thinkWatch.active = false;
+  }
+  if (thinkWatch.active) thinkWatch.elapsedMs = now - thinkWatch.startAt;
   live.flightGen = flight ? flight.gen : null;
   if (!flight) {
     if (est !== null) {
@@ -1079,11 +1109,15 @@ function render({ latest, turn, session, live }) {
     }
     if (latest.durationMs !== null && latest.durationMs !== undefined) {
       want("e2e", "⋮", "E2E", fmtSec(latest.durationMs), "", "最近一次调用端到端墙钟（含等首字），仅供参考");
-      if (thinkSec !== null) {
-        want("think", "◈", "思考", `${thinkSec.toFixed(1)}s`, "",
-          `最近一次调用思考吐字时长（估算）≈ ${latest.rea} 思考token ÷ ${latestTps} tok/s（假设思考与正文同速，±误差大）${turnThinkSec === null ? "" : `\n本轮思考合计 ≈ ${turnThinkSec.toFixed(1)}s`}\n思考 token 已计入 ⚡ 分子与解码窗`);
-      }
     }
+  }
+  const thinkLive = thinkWatch.active && thinkWatch.elapsedMs > 300;
+  if (thinkLive) {
+    want("think", "◈", "思考中", `${(thinkWatch.elapsedMs / 1000).toFixed(1)}s`, "think live",
+      `思考进行中（秒表：检测到最后一个思考块在增长；结束后切换为 推理token÷速度 估算）\n思考 token 已计入 ⚡ 分子与解码窗`);
+  } else if (thinkSec !== null) {
+    want("think", "◈", "思考", `${thinkSec.toFixed(1)}s`, "",
+      `最近一次调用思考吐字时长（估算）≈ ${latest.rea} 思考token ÷ ${latestTps} tok/s（假设思考与正文同速，±误差大）${turnThinkSec === null ? "" : `\n本轮思考合计 ≈ ${turnThinkSec.toFixed(1)}s`}\n思考 token 已计入 ⚡ 分子与解码窗`);
   }
   if (turn && turn.calls > 0 && turn.gen > 0) {
     want("turn", "▤", "本轮", `${fmtTokens(turn.gen)} tok`, "", `本轮（最新提问之后）累计生成 ${turn.gen} tokens；解码速度见左侧 ⚡`);
@@ -1118,6 +1152,7 @@ function render({ latest, turn, session, live }) {
     sessionGen: session ? session.gen : 0,
     sessionTps: session ? session.decodeTps : null,
     live: { mode: live.mode, rate: live.rate, source: live.source, flightGen: live.flightGen, domLen: live.domLen },
+    thinkLive: { active: thinkWatch.active, elapsedMs: thinkWatch.elapsedMs },
   };
   // Sync the persistent segment elements against the desired list (order,
   // content, classes) — updating in place is what lets values transition
@@ -1160,6 +1195,26 @@ function render({ latest, turn, session, live }) {
   fitSegments();
 }
 
+/* DOM 侦察：宿主把「思考」渲染成什么形状？有稳定特征才能做流式思考秒表。
+ * 只数数量、取类名样本和文本长度，不读内容。 */
+function thinkProbe() {
+  const out = { think: 0, reason: 0, details: 0, summary: 0, samples: [] };
+  try {
+    out.think = document.querySelectorAll('[class*="think" i]').length;
+    out.reason = document.querySelectorAll('[class*="reason" i]').length;
+    out.details = document.querySelectorAll("details").length;
+    out.summary = document.querySelectorAll("summary").length;
+    const nodes = [...document.querySelectorAll('[class*="think" i], details')].slice(0, 8);
+    out.samples = nodes.map((n) => {
+      const cls = typeof n.className === "string" ? n.className : "";
+      return `${n.tagName.toLowerCase()}.${cls.slice(0, 70) || "-"} len=${n.textContent.length}`;
+    });
+  } catch {
+    // probe is best-effort
+  }
+  return out;
+}
+
 async function pollOnce() {
   tickCount += 1;
   let pollError = null;
@@ -1197,6 +1252,7 @@ async function pollOnce() {
           tNode: Boolean(hub.transcriptNode && hub.transcriptNode.isConnected),
           dropped: lastDropped,
           hidden: [...hiddenFields],
+          thinkProbe: thinkProbe(),
           anchorConnected: Boolean(anchor && anchor.isConnected),
           records: hub.records.size,
           found: hub.stats.found,
