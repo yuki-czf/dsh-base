@@ -10,12 +10,13 @@
  *   - ~/.pi-desktop/sessions/<id>.jsonl   工具调用（args/isError）、assistant meta.usage
  *   - ~/.pi-desktop/pi.sqlite             turns 状态（running 卡死 / error 连发）
  *
- * 五条规则（阈值可用 CLI 覆盖）：
+ * 六条规则（阈值可用 CLI 覆盖）：
  *   R1 失败循环   同签名工具连败 >=3（15 分钟窗，同签名成功即重置）→ 死循环熔断提示
  *   R2 上下文超限 当前上下文 >250k token（inputTokens+cacheReadTokens；降回 230k 重新武装）
  *   R3 回合卡死   单回合 running >25 分钟
  *   R4 回合风暴   单回合工具调用 >45 次（271 T3：48 次重试 38 败）
  *   R5 提供方连错 同会话 15 分钟内 >=3 个 error 回合 → 换模型提示（271 T4 教训）
+ *   R6 调度器越权 接力会话（派过 Task）的主会话改源码/跑测试 → 白名单违规即时弹窗（R2 实测教训）
  *
  * 用法：
  *   node watchdog.mjs                       常驻，10s 轮询，弹 toast
@@ -182,6 +183,22 @@ function scanFile(fp, now) {
       } else {
         st.failures.delete(sig); // 同签名成功 → 重置该签名
       }
+      // R6 调度器越权（v1.0.8）：接力会话（派过 Task）的主会话改源码/跑测试 = 白名单违规
+      const tn = e.toolName ?? b.name ?? '?';
+      if (tn === 'Task') st.taskDispatched = true;
+      if (st.taskDispatched && !stale) {
+        let violation = null;
+        if (tn === 'Edit' || tn === 'Write') {
+          const p = String(b.args?.path ?? b.args?.file_path ?? '');
+          if (/\.(vue|ts|tsx|js|jsx|py|css|scss)$/i.test(p) && !/\.nodes|scratch|relay|archive|plans/i.test(p)) violation = `${tn} 改源码 ${p.slice(0, 80)}`;
+        } else if (tn === 'Bash') {
+          const c = String(b.args?.command ?? '');
+          if (/vitest|gate\.ps1|npm test|pytest|vue-tsc|node --test/.test(c)) violation = `Bash 跑测试 ${c.replace(/\s+/g, ' ').slice(0, 80)}`;
+        }
+        if (violation) fire('R6', st.sessionShort,
+          `pi-tempo 看门狗：调度器越权 (${st.sessionShort})`,
+          `接力会话主会话自己动手了：${violation} → 白名单只许 读报告/记facts/备简报/存档/越界检查，去喊停`);
+      }
       if (st.turnCalls > OPT.turnCalls && !st.turnCallsAlerted && !stale) {
         st.turnCallsAlerted = true;
         fire('R4', st.sessionShort + '|' + st.turnKey,
@@ -279,7 +296,7 @@ function tick(first = false) {
       .filter((x) => now - x.mtime < 30 * 60_000)
       .sort((a, b) => b.mtime - a.mtime)
       .slice(0, 5);
-    console.log(`[pi-tempo watchdog] ${new Date().toISOString()} 会话文件=${fps.length} 活跃=${active} 规则=R1连败${OPT.failStreak} R2>${Math.round(OPT.ctxLimit / 1000)}k R3卡${OPT.turnStuckMs / 60000}min R4>${OPT.turnCalls}次 R5连错${OPT.providerErr}`);
+    console.log(`[pi-tempo watchdog] ${new Date().toISOString()} 会话文件=${fps.length} 活跃=${active} 规则=R1连败${OPT.failStreak} R2>${Math.round(OPT.ctxLimit / 1000)}k R3卡${OPT.turnStuckMs / 60000}min R4>${OPT.turnCalls}次 R5连错${OPT.providerErr} R6越权`);
     for (const { st } of hot) {
       console.log(`  ${st.sessionShort}  ctx≈${Math.round(st.ctxMax / 1000)}k  本回合工具=${st.turnCalls}  连败签名=${[...st.failures.values()].filter((r) => r.count >= 2).length}`);
     }
