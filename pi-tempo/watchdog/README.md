@@ -15,6 +15,14 @@ node watchdog.mjs --once
 
 要求：Node ≥22.5（`node:sqlite`）。R3/R5 依赖 pi.sqlite；R1/R2/R4 只要 sessions 目录。
 
+## 自启动（已配置）
+
+- **开机自启**：`shell:startup\pi-tempo-watchdog.lnk` → `wscript start-on-boot.vbs`（完全隐藏，无窗口闪烁）→ `start.ps1`（单实例守卫：PID 文件判活＋孤儿 node 清理；崩溃 5s 自动拉起）。
+- 重复启动是安全的：第二个实例检测到已在运行会记一行日志后退出。
+- **停止**：任务管理器结束对应 `node.exe`（或先删 `~/.pi-desktop/logs/pi-tempo-watchdog.pid` 指向的 powershell 进程）。
+- **取消自启**：删除 `shell:startup\pi-tempo-watchdog.lnk`（Win+R 输 `shell:startup` 直达）。
+- 运行日志 `~/.pi-desktop/logs/pi-tempo-watchdog-run.log`（UTF-8；告警另存 `pi-tempo-watchdog.jsonl`）。
+
 ## 数据源（全只读，不干扰宿主）
 
 | 来源 | 用途 |

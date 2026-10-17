@@ -197,13 +197,11 @@ function scanFile(fp, now) {
         const ctx = (u.inputTokens ?? 0) + (u.cacheReadTokens ?? 0);
         if (ctx > st.ctxMax) st.ctxMax = ctx;
         if (st.ctxMax > OPT.ctxLimit) {
-          if (!st.ctxAlerted) {
+          if (!st.ctxAlerted && !stale) {
             st.ctxAlerted = true;
-            if (!stale) {
-              fire('R2', st.sessionShort,
-                `pi-tempo 看门狗：上下文超限 (${st.sessionShort})`,
-                `当前上下文 ≈${Math.round(st.ctxMax / 1000)}k token（熔断线 ${Math.round(OPT.ctxLimit / 1000)}k）→ 现在写 handoff 提示词，换会话或换模型发「继续」`);
-            }
+            fire('R2', st.sessionShort,
+              `pi-tempo 看门狗：上下文超限 (${st.sessionShort})`,
+              `当前上下文 ≈${Math.round(st.ctxMax / 1000)}k token（熔断线 ${Math.round(OPT.ctxLimit / 1000)}k）→ 现在写 handoff 提示词，换会话或换模型发「继续」`);
           }
         } else if (st.ctxMax < OPT.ctxRearm) {
           st.ctxAlerted = false;
