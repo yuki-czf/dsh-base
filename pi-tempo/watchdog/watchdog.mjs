@@ -224,9 +224,13 @@ function scanDb(now) {
       "SELECT id, session_id, started_at, model_id FROM turns WHERE status='running' AND started_at < ?"
     ).all(now - OPT.turnStuckMs);
     for (const t of stuck) {
+      // 活跃判定：会话文件 5 分钟内有写入 = 在干活（可能是长回合/长 Bash），不算卡死
+      let fresh = false;
+      try { fresh = now - fs.statSync(path.join(OPT.sessionsDir, t.session_id + '.jsonl')).mtimeMs < 5 * 60_000; } catch {}
+      if (fresh) continue;
       fire('R3', t.id,
         `pi-tempo 看门狗：回合卡死 (${t.session_id.slice(0, 8)})`,
-        `回合已 running ${Math.round((now - t.started_at) / 60000)} 分钟（${t.model_id}）→ 不是在硬算就是在死循环，看一眼`);
+        `回合已 running ${Math.round((now - t.started_at) / 60000)} 分钟且 5 分钟无任何写入（${t.model_id}）→ 不是在硬算就是在死循环，看一眼`);
     }
     const errTurns = db.prepare(
       "SELECT session_id, started_at FROM turns WHERE status='error' AND started_at > ? ORDER BY started_at DESC LIMIT 50"
