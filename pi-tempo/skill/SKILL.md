@@ -1,6 +1,6 @@
 ---
 name: pi-tempo
-version: 1.0.3
+version: 1.0.4
 description: PI-Desktop 里的**执行节奏纪律**（pi-tempo 体系）——把「时间＝模型往返次数 × 每次等待」当第一性原理，系统性地压掉白往返。含十节：① Edit 行操作语法与「写入后必须重新 Read 拿新 tag」② Bash 超时必须显式传 timeout ③ 按退出码判成败（npm warn/DeprecationWarning/browserslist 噪声不是失败）④ 临时脚本先 node --check ⑤ 验证节奏＝最小子集再全量 ⑥ 先 Grep 定位再 Read 精确窗口、且**重复读是最大隐性开销** ⑦ Glob/Grep 参数必填 ⑧ 往返预算（读档一次并发、同一文件一次读够、独立调用同批发出、预告每批一行）⑨ 多任务切分与并行派发（先证明文件集不相交、契约冻结、共享文件单 owner、越界检查、规模过大就拆批）⑩ 子代理依赖调度（主线程当调度器、fan-in 收口）。当准备调用 Edit/Write/Bash 工具、当工具调用报错需要重试、当决定如何验证改动、当执行变慢/往返太多需要提速、或当要把一个任务拆成多个并行子任务派给 subagent 时使用。Use before editing files or running shell commands, when a tool call fails and you retry, when choosing how to verify a change, when execution feels slow, or when splitting work into parallel subagent tasks.
 ---
 
@@ -131,7 +131,9 @@ PUT 120.=122:
 
 **批次终止集（开工前声明，随 ANCHOR 一行带出）**：每个批次同时写明上限——`ANCHOR: 风险 → 验证点 → §号 → 本批上限：N 次迭代 / M 分钟`。到达上限未完成 → checkpoint 留断点，报告差距，**不许无声续跑**。
 
-**会话熔断（v1.0.3）**：上下文 >50 万 token 或进入第 3 个回合 → **不要「继续」**，跑 `save checkpoint` 留断点后**开新会话**（断点恢复靠档案不靠对话；实测 4 回合堆到 70 万 token 后每趟重喂 60 万，卡死 60 分钟被掐断）。等效且更快的替代：**换个模型发「继续」**——新视角等效新上下文（实测即此解局）。
+**会话熔断（v1.0.4，线从 50 万下调至 25 万）**：上下文 **>25 万 token** 或进入第 3 个回合 → **不要「继续」**。三方依据合流：本机实测 21 万时规则已衰减（节点 269）＋社区共识 Pro 级 300k 压缩（Gemini 系更弱取下限）＋ Codex 官方自动压缩线 272k。
+
+**到线动作（handoff 优先于 checkpoint）**：先让模型写一句**「新会话接续提示词」**——含当前进度 / 关键决策**及其为什么** / 下一步 / 已踩的坑——新会话粘贴即续。这比裸 checkpoint 可靠：压缩摘要发生在上下文最满＝模型最笨时（Claude Code 团队原话），而 handoff 是让模型在还清醒时自己精选交接。写完再跑 `save checkpoint` 落档案。等效且更快的替代：**换个模型发「继续」**（新视角等效新上下文，实测即此解局）。失败方案不要口头纠偏追加——把教训写进新会话的提示词里重来，失败的中间过程留在上下文里只会加重衰减。
 ## 9. 多任务切分：并行前先证明「文件集不相交」
 
 并行只在任务真正独立时省时间。划分错了 = 两个 agent 互相作废（Edit 是行操作、写后 tag 变，
