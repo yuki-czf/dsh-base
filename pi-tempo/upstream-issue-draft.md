@@ -38,16 +38,16 @@ What we found while trying to fix this in-app:
 
 **Body:**
 
-On a 1M-token context window, auto-compaction currently triggers at ~92% (≈920k). But effective attention degrades much earlier: our measurements on Gemini 3.8 Flash show instruction-following collapse in the 200–300k range (rules verbatim in context, followed ~0%; community consensus for this model family is 50k–300k effective context; Codex officially summarizes at ~272k). The result is a large "dead zone" — 250k to 920k — where the session looks healthy but quality is silently gone.
+On a 1M-token context window, auto-compaction triggers only at `contextWindow - reserveTokens` (reserveTokens defaults to 16384, so ~1.03M). But effective attention degrades much earlier: our measurements on Gemini 3.8 Flash show instruction-following collapse in the 200–300k range (rules verbatim in context, followed ~0%; community consensus for this model family is 50k–300k effective context; Codex officially summarizes at ~272k). The result is a large "dead zone" — 250k to 1.03M — where the session looks healthy but quality is silently gone.
 
-We also tried `compactAfterTokensMode` / `compactAfterTokensRatio` in `~/.pi/agent/settings.json`: **not recognized** by pi-coding-agent 0.87.1 nor by the desktop host's embedded core (0 hits in code search; the keys appear to be from the 1.x CLI line).
+There is no dedicated threshold setting. `compactAfterTokensMode` / `compactAfterTokensRatio` in `~/.pi/agent/settings.json` are **not recognized** by pi-coding-agent 0.87.x nor by the desktop host's embedded core (0 hits in code). The only lever today is misreporting the model's `contextWindow` in the provider config (the trigger is `tokens > contextWindow - reserveTokens`) — which we now do (272000 → auto-compaction at ~256k). That works, but it conflates "when to compact" with "how big the model's window is": the same field also feeds silent-overflow detection (`usage.input + cacheRead > contextWindow`) and context-% UI, so a deliberately understated window can misclassify large-but-valid responses as overflow on providers that accept them.
 
 **Ask:**
 
-- Expose compaction trigger as a setting (absolute tokens or %), per model if possible.
-- Bonus: compact *before* the context is at its worst — compaction quality depends on the model being asked to summarize, and at 92% it's the most degraded model doing the summarizing.
+- Expose compaction trigger as a first-class setting (absolute tokens or %), independent of the declared context window, per model if possible.
+- Bonus: compact *before* the context is at its worst — compaction quality depends on the model being asked to summarize, and near the window limit it's the most degraded model doing the summarizing.
 
-**Workaround:** manual handoff prompts at 250k (we wrote the discipline into a skill + external watchdog alert). Configurable threshold would remove the manual step.
+**Workaround (current):** understated `contextWindow` in provider config (272000 → ~256k trigger) + manual handoff prompts at 250k (discipline written into a skill + external watchdog alert). A real threshold setting would remove both hacks.
 
 ---
 

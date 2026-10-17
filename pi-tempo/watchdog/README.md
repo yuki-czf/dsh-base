@@ -45,6 +45,11 @@ node watchdog.mjs --once
 - 告警：`~/.pi-desktop/logs/pi-tempo-watchdog.jsonl`（每条一行 JSON）
 - 运行日志：`~/.pi-desktop/logs/pi-tempo-watchdog-run.log`（start.ps1）
 
+## 系统级配合（2026-10-17 起）
+
+- R2 的系统级对应已落地：`~/.pi-desktop/pi.sqlite` providers 表 CPA gemini-3.8-flash 的 `contextWindow` 1048576→**272000**（`reserveTokens` 默认 16384）→ 宿主自动压缩触发点 = **255,616 ≈ 25.6 万 token**（公式 `shouldCompact = contextTokens > contextWindow − reserveTokens`，pi-coding-agent compaction.js:149）。回滚=同字段改回 1048576，改后重启生效。
+- 效果=双保险：R2 弹通知（人做 handoff，清醒时写摘要）＋宿主自动压缩（机器兜底，防漏）。handoff 仍是首选——压缩发生在上下文最满=模型最笨时，摘要质量不可靠。
+
 ## 实测
 
 - fixture 端到端：五条规则全触发、静默回填正确、同签名连败带命令正文（`Bash::node scripts/verify.mjs --all`）。
