@@ -1,6 +1,6 @@
 ---
 name: pi-tempo
-version: 1.0.9
+version: 1.0.10
 description: PI-Desktop 里的**执行节奏纪律**（pi-tempo 体系）——把「时间＝模型往返次数 × 每次等待」当第一性原理，系统性地压掉白往返。含十节：① Edit 行操作语法与「写入后必须重新 Read 拿新 tag」② Bash 超时必须显式传 timeout ③ 按退出码判成败（npm warn/DeprecationWarning/browserslist 噪声不是失败）④ 临时脚本先 node --check ⑤ 验证节奏＝最小子集再全量 ⑥ 先 Grep 定位再 Read 精确窗口、且**重复读是最大隐性开销** ⑦ Glob/Grep 参数必填 ⑧ 往返预算（读档一次并发、同一文件一次读够、独立调用同批发出、预告每批一行）⑨ 多任务切分与并行派发（先证明文件集不相交、契约冻结、共享文件单 owner、越界检查、规模过大就拆批）⑩ 子代理依赖调度（主线程当调度器、fan-in 收口）。当准备调用 Edit/Write/Bash 工具、当工具调用报错需要重试、当决定如何验证改动、当执行变慢/往返太多需要提速、或当要把一个任务拆成多个并行子任务派给 subagent 时使用。Use before editing files or running shell commands, when a tool call fails and you retry, when choosing how to verify a change, when execution feels slow, or when splitting work into parallel subagent tasks.
 ---
 
@@ -251,6 +251,7 @@ GOAL: 本批要达成什么（一句话）
 
 **边界**：无明确文件集的探索性批次不接力（授权集写不出来）；短节点别用（每棒多付 2 趟往返）。**修订早前决策**：「明确放弃 Core never writes code 路由器模式」的前提是省贵模型 token；多账号 token 池下动机改为抗长上下文衰减，纯调度模式重新成立——但**仅限档案化接力表驱动的形态**（先落表后执行），不接受执行会话现场自判。
 - **执行槽闸（v1.0.9）**：节点登记的验收标准末尾必带 `执行:` 槽（`执行:执行接力` 或 `执行:—(自干理由)`），`save.ps1 next-node` 硬校验；`/node-run` 读档后无执行槽且任务 ≥3 → 停下补登记再开工，不默认自干（#273 实测：无槽自干＝57min／ctx 498k／看门狗六弹）。
+- **双轨自检与返工棒（v1.0.10）**：接力每棒收敛先 `git status --porcelain` 对比授权集——授权集外改动＝调度器抢写违规，**停止而非重派**（#274 实测：主会话 78 Edit 与棒赛写→2 次棒重派＋ctx 408.9k，重派救不了双轨）；等待窗口禁 Read 源码本体（读棒报告/facts 即可，274 的 433 次 Read 是烧穿上下文的直接原因）；复审发现问题 → **单支返工棒**吃完所有发现（含验证），主会话禁参与返工；本端有会话级只读模式且不阻 Task 派发时开工即切（物理剥夺 Edit/Write）。
 
 ### 反模式
 
