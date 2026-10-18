@@ -45,3 +45,6 @@ yarn-error.log*
 /.opencode/plugin/
 node_modules/
 .local/agent-work/
+
+# DSH 适配（节点#16）：审计用会话转录 jsonl 不入库（证据摘要已进 .nodes/ 与 discrepancies.md）
+research/dsh-adaptation-drafts/*.jsonl

@@ -170,3 +170,17 @@
 - **TSCG 否决（实测>宣称）**：@tscg/core 1.4.3 compressDescriptions 用 dd0a81d4 真实 15 工具目录实测仅省 0.3%（48B）；其 50-72% 宣称是破坏 schema 结构的 full-compress 口径，description-only 在已精简目录上收益≈0——v11 白名单已吃掉大头，剩余 14.3KB 主体是参数 schema，无免费压缩空间。vendor 未落地即回退。
 - **CPA 联合裁决**（家里侧执行已生效）：antigravity connection-pool 开（默认关）；quota-exceeded.switch-preview-model 关（配额紧张静默切 preview 模型是"时快时慢"嫌疑元凶）；session-affinity 否决——家里 9/21 实测双账号 RR 缓存命中 92-98%（10M tokens 会话 93%），官方注释推断被证伪且粘性伤配额分摊；**隐式缓存在 CPA→Antigravity OAuth 链路实测有效**——修正"OAuth 不可缓存"旧假设（其仅适用显式 caches.create）。reasoningEffort=high 源头=DSH 侧 agent-default-model 配置行（降档一行即改，红线待数据）。
 - **影响**：rulesText 热改生效；host.js v12+allow16 需重启 DSH 桌面；回滚=恢复 cordis.patch.yml.bak-dsh-v12-20260926 + host.js.bak-v11 + 删 rulesText 两行。验收点：wire 16、`registry MASKED (allow 15 adaptive from 16; dropped subagent)` 日志、subagent 真调、首步 plan-first。
+
+## [2026-10-18] #16 DSH主力栈适配 批B：两预设工具面定案（开放问题2 收口）
+
+- **背景**：蓝图 B2① 要求 preset-prometheus-spec 挂「只读工具面」并留悬念「dsh-tool-fs 能否只挂 read」（开放问题2）；同时 B2③ 要求「override 行 tool-subagent 加 allowedAgentPresets」。
+- **查证**（真源=dsh checkout 包 README + dsh-web-app 预设补丁）：① dsh-tool-fs Config 四独立开关 read/readImage/write/edit（默认 true），minimal 出货预设即有只读挂载示范 → 只读可行；② web-app 基底把 Host 层 tool-subagent 行 disabled:true，注释明言「preset 决定 agent 看到哪些委派工具」→ override Host 行无法影响预设会话，subagent 工具行必须由预设自持。
+- **决定**：① preset-prometheus-spec 的 fs **全量挂**（规划者必须写 changes/ 五件套，只读会废掉 A4 核心工作流），越界写靠 persona 闸门口径（蓝图自带降级），物理路径闸门留二期 policy 插件——**开放问题2 答案=能只挂 read**；librarian 无需 policy 即物理无写，prometheus-spec 的路径级闸门有立项价值，按蓝图「等越权写证据」再定；② tool-subagent 以**预设内整块重述声明**落地（照抄 standard/ptc 原行 config 三字段 + allowedAgentPresets:[librarian]）；③ 两条预设补挂 compaction 组（全部出货预设都带，蓝图清单缺项）；④ preset-prometheus-spec 必须带 skill-filesystem+tool-skill 对（web-app 层禁了 Host 发现，预设自持，否则「首步加载 skill」无技能可载）。
+- **影响**：bundle=`@local/dsh-prometheus-spec`（pnpm link 到 `research\dsh-adaptation-drafts\bundle`，草稿目录承重）；两 preset 行激活无诊断。坑与漂移全文见 `research\dsh-adaptation-drafts\discrepancies.md`（11 条，含 skill frontmatter ASCII 冒号静默丢弃坑）。
+
+## [2026-10-18] #16 四棒实体化：执行棒从 prompt 模板升级为 preset（用户决策）
+
+- **背景**：用户追问「为什么没有创建那几个子智能体」并确认需要 GUI 可见。蓝图 A2 原设计＝三执行棒仅作 prompt 模板（派发时注入），GUI 无任何实体；PI-Desktop 对照是「文件即定义」，DSH 唯一定义形态＝preset。
+- **决定**：bundle v1.1.0 追加三条预设——preset-gemini-fixer（persona=A2 正文真源；fs 全量+fs-search+pwsh 带平台守卫；无 web）、preset-gemini-scout（fs 只读 write:false/edit:false+pwsh）、preset-independent-review（fs 只读、无 shell、无 web）；tool-subagent 白名单扩四元；A3/A4 派发口径同步改为 subagent(agent_preset=…, prompt=六段简报, provider/model 调用层传)——固定纪律由 persona 常驻，简报只带变量部分。
+- **不变项**：模型钉死仍不可能（DSH preset 无 model 字段），`__GEMINI_ROUTE__` 维持调用层传；验收⑥口径不变（枚举含 librarian），只是枚举多了三个同伴。
+- **影响**：五 preset 行激活无诊断（插件总数 223→226）；新会话预设选择器将出现五个条目（fixer/scout/review 也可被选成会话预设，无害副作用）；link 包版本升级流程=remove_bundle→install_bundle。详见 discrepancies #11。

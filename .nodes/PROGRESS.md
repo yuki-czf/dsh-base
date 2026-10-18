@@ -1,9 +1,11 @@
-# 节点进度矩阵 PROGRESS
+﻿# 节点进度矩阵 PROGRESS
 
 > 每个节点一行，谁拥有谁更新（只 edit 自己的行）。新节点插在表头下方。
 
 | # | 节点 | 验收标准 | 状态 | Owner 会话 | 更新时间 |
 |---|------|----------|------|-----------|----------|
+| 17 | 试跑草稿目录文档化 | ①research/dsh-adaptation-drafts/README.md 三要素（目录用途/bundle承重警告/persona真源与装配一句话）②discrepancies.md 顶部目录索引锚点与条目一一对应 ③.nodes/relay/试跑草稿目录文档化/facts.md 各棒记录各段≤300字 ④基线vs越界复核零越界（新增行仅README.md与discrepancies.md两文件）⑤复审棒回报逐项带行号 ⑥调度会话零源码写入；执行:执行接力（批0 scout基线→批1 fixer×2并行→批2 scout越界复核→批3 review异构）；收口:独立复审 | 已完成 | main | 2026-10-18 |
+| 16 | DSH主力栈适配 | ①A1-A6 落位且 frontmatter 合法（name kebab+description）②技能目录出现 pi-tempo、prometheus-spec；斜杠命令面出现 node-run（GUI 实测）③A1 保留 §8.5 锚定与 §10 依赖四型普适内核（对照云端原文抽查）④B3 两 preset 行激活无诊断、新会话选择器可见 ⑤prometheus-spec 预设新会话首步主动加载 skill、对「实现X」回「创建工作计划」不写码 ⑥subagent 长出 agent_preset 枚举含 librarian；派 librarian 跑通（web+read 无写工具）⑦同消息并发≥2 subagent→完成通知 fan-in（依赖 __GEMINI_ROUTE__ 回填+Settings→Subagent 模型可选，未回填挂起）⑧真实小节点试跑（接力表2棒：facts 记账+越界检查+异构复审）；执行:执行接力（批A文件/批B bundle 可两棒，预估>40min）；收口:独立复审（对照云端原文 diff 抽查+GUI 实测验收） | 已完成 | main | 2026-10-18 |
 | 10 | v1.4.0 skill 优化与母版同步（分层文档 / 真源对齐 / 一键存档 / 目录锁 / 跨平台 save.mjs） | SKILL.md 分三层（精简版 + QUICKREF 速查 + SKILL-FULL 全文）；母版↔真源镜像 diff=0；版本号三处一致 v1.4.0（SKILL frontmatter / .nodes/PROTOCOL.md / AGENTS 指针，且 init 能自刷新）；save.ps1 新增 `save` 与 `trim-decisions` 动作 + 目录锁原子创建 + DECISIONS 行数与待验收过期双告警；save.mjs 跨平台功能对等；新机解压安装实测通过；dist v1.4.0 zip+sha256 | 已完成 | main | 2026-09-17 |
 | 14 | 云端分发入口：remote-install 泛化多模块（原云端#4） | ①-Module 参数路由 node-architect/ssh-runner，默认行为向后兼容 ②-ZipPath 离线安装可用 ③本地 zip 模拟云端：两模块均能装入临时项目且产物完整 ④README 含 ssh-runner 云端安装命令 | 已完成 | opencode 主会话 | 2026-08-22 |
 | 15 | v1.5.0+v1.6.0 batch-executor 退役与执行效率协议（另一会话演进，本次补登记） | v1.5.0：batch-executor 全家（derive-next-batch.ps1/DSH preset/opencode agent）退役入 attic/，verify -Completed 增归档占位符校验；v1.6.0：PROTOCOL 增「执行效率协议」（开工侦察/批次依赖标注/批内检查点/效率复盘）、拆批触发扩至时间巨头（>15 文件/>100 处/>40 分钟）、协议本体 ≤150 行红线、verify-batch 增侦察段占位符与校准日志机器校验；save.mjs 对等；真源同步 v1.6.0；dist v1.6.0 zip | 已完成 | main | 2026-09-18 |
