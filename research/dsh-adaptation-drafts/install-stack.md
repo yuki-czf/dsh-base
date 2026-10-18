@@ -1,6 +1,7 @@
 # DSH 主力栈跨设备安装手册（install-stack）
 
-> 版本：v1（对应 bundle v1.3.1，commit 2478eca+）· 母仓 yuki-czf/dsh-base
+> 版本：v1.1（对应 bundle v1.3.2，commit 19ba83c+）· 母仓 yuki-czf/dsh-base
+> **DSH 版本要求：核心 `>=0.2.1-rc.2 <0.2.2`**（验证基线＝0.2.1-rc.2 / 桌面壳 2.0.18；bundle 已带 engines 闸，不满足会拒装）
 > 用法：目标设备的 DSH Desktop，工作区打开本仓库克隆，用**默认会话**粘贴下方开工话术，代理照本手册执行。
 
 ## 0. 开工话术（复制即用）
@@ -15,6 +16,7 @@
 
 | # | 检查 | 方法 | 缺失处理 |
 |---|---|---|---|
+| P0 | DSH 核心版本在窗口内 | `plugin_manager list_bundles` 看 `@deepseek-ai/dsh-base` 的 version（须 ≥0.2.1-rc.2 且 <0.2.2） | 版本过旧/过新 → 停止并报告（bundle engines 闸同款约束；升级 DSH 或等本栈适配后再装） |
 | P1 | 本仓库文件就位 | 存在 `research/dsh-adaptation-drafts/bundle/package.json` | 报错停止（克隆/拷贝不完整） |
 | P2 | DSH home 与 profile | 存在 `~/.dsh/profiles/desktop/` | 报错（DSH Desktop 未初始化） |
 | P3 | 会话有 `plugin_manager` 工具 | 本会话工具列表 | 若无：请用户在设置→Agent 预设换带插件管理的预设；或本手册 S3 走 GUI 侧栏「插件」页兜底 |
