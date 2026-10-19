@@ -1,8 +1,9 @@
 # DSH 主力栈跨设备安装手册（install-stack）
 
-> 版本：v1.1（对应 bundle v1.3.2，commit 19ba83c+）· 母仓 yuki-czf/dsh-base
+> 版本：v1.2（对应 bundle v1.3.2）· 母仓 yuki-czf/dsh-base
 > **DSH 版本要求：核心 `>=0.2.1-rc.2 <0.2.2`**（验证基线＝0.2.1-rc.2 / 桌面壳 2.0.18；bundle 已带 engines 闸，不满足会拒装）
-> 用法：目标设备的 DSH Desktop，工作区打开本仓库克隆，用**默认会话**粘贴下方开工话术，代理照本手册执行。
+> **产品名注记（2026-10-19）**：本栈验证于 DSH Desktop 时期，该产品现已更名 **DeepSeek NEXT**——本手册一切判据（P0 版本窗口、P2 目录、S3 工具、S5 路径）均以**版本字段/目录路径/工具名**为准，不依赖产品名，后续再改名也不影响。更名后的新版本线未经验证，engines 闸会照常拒装——须先在本仓验证后放宽窗口。
+> 用法：目标设备的 DSH 桌面端（旧名 DSH Desktop / 现名 DeepSeek NEXT），工作区打开本仓库克隆，用**默认会话**粘贴下方开工话术，代理照本手册执行。
 
 ## 0. 开工话术（复制即用）
 
@@ -18,7 +19,7 @@
 |---|---|---|---|
 | P0 | DSH 核心版本在窗口内 | `plugin_manager list_bundles` 看 `@deepseek-ai/dsh-base` 的 version（须 ≥0.2.1-rc.2 且 <0.2.2） | 版本过旧/过新 → 停止并报告（bundle engines 闸同款约束；升级 DSH 或等本栈适配后再装） |
 | P1 | 本仓库文件就位 | 存在 `research/dsh-adaptation-drafts/bundle/package.json` | 报错停止（克隆/拷贝不完整） |
-| P2 | DSH home 与 profile | 存在 `~/.dsh/profiles/desktop/` | 报错（DSH Desktop 未初始化） |
+| P2 | DSH home 与 profile | 存在 `~/.dsh/profiles/desktop/` | 报错（DSH 桌面端——DSH Desktop/DeepSeek NEXT——未初始化） |
 | P3 | 会话有 `plugin_manager` 工具 | 本会话工具列表 | 若无：请用户在设置→Agent 预设换带插件管理的预设；或本手册 S3 走 GUI 侧栏「插件」页兜底 |
 | P4 | 模型渠道就绪 | 扫描 profile 的 llm-pi-ai providers **只列键名**（密钥值一律不读不显）；确认存在至少一条 Gemini 系路由与一条异构（非 Gemini）路由 | 缺则停：渠道接入属用户自理，配好后重跑 |
 

@@ -21,3 +21,4 @@
 - [checkpoint 2026-10-18 20:3x] node=DSH主力栈适配 - ⑧ 搭台（v1.3.1 双路由白名单+#17 登记+接力表）
 - [checkpoint 2026-10-18 21:3x] node=DSH主力栈适配 - ⑧ PASS（4批5棒全链）；#17 已完成；§6 八项全 PASS
 - [checkpoint 2026-10-18 21:5x] node=DSH主力栈适配 - 收口复审=通过（零阻断）；三建议级滞后已修；归档收口
+- [checkpoint 2026-10-19T08:52:44] node=DSH主力栈适配 - note=云端推送完成（2026-10-19晨）：fetch/merge/push 全通（ACL 问题在 full access 下不存在）；merge-base=4ead442、双方改动交集=0、零冲突合并 917e1dc；云端 PROGRESS max=15（昨担心的编号撞车不存在）；合并带入 node-architect v1.13.3（AGENTS.md 已热更）+ pi-tempo v1.0.10/prometheus-spec 母版目录。改名调查：GitHub/npm/exe 2.0.18/release notes 10-17/生态清单/官方文档站全部仍叫 DeepSeek Harness/DSH Desktop——未找到官方改名证据，已询问用户信息来源
