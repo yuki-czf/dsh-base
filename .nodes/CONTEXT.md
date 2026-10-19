@@ -1,7 +1,7 @@
 # 项目快照 CONTEXT
 
 > 本文件是项目一页纸快照，任何会话开工前必读。永远保持一屏以内，细节放 archive/。
-> 最后更新：2026-10-19（双机合并；由 node-architect 存档流程维护）
+> 最后更新：2026-10-19（#31 profile store 失配修复收口；由 node-architect 存档流程维护）
 
 ## 项目一句话
 
@@ -9,6 +9,8 @@ node-architect：把"设计先行 + 节点存档 + 读档恢复"的长项目协�
 
 ## 当前节点
 
+- **节点 31**：`DSH profile store 失配修复`（**已完成** 2026-10-19，会话 dsh-next-mig；细节 archive 同名）——profile 的 node_modules 记录被 PATH 上的 pnpm 10.32.1 写成 `E:\.pnpm-store\v10`，与 DSH 自带 pnpm 11.8.0 解析的 `v11` 不符 → 市场全拒（ERR_PNPM_UNEXPECTED_STORE）；只改 `.modules.yaml` 两字段零重装修复，add/remove 双通＋两插件实装成功
+- **节点 30**：`更名证实与旧会话迁移`（**已完成** 2026-10-19，会话 dsh-next-mig）——DSH Desktop→DeepSeek NEXT 更名经用户证实；296 会话迁入 E:\.dsh\sessions＋235 条标题缓存补挂＋workspace.json 分组合并（4 工作区/21 归档恢复），用户逐步验证通过
 - **节点 29**：`四连败封盘：接力执行迁 openchamber permissions 硬闸`（**已完成** 2026-10-18，会话 pidesktop-gemini；细节 archive 同名）——274R1 确认装载仍双轨 → **提示词层方案封盘**（272R1→274R1 四连）；方向 B 拍板：openchamber build-relay agent（permissions 工具级硬闸）；PI-Desktop 退居规划＋复审＋验收
 - **#16 DSH主力栈适配**（**已完成** 2026-10-18，另一设备 main；归档 archive/DSH主力栈适配.md）：蓝图 research/dsh-desktop-adaptation.md 全落地，§6 十项全 PASS；三 skill＋bundle v1.3.1 五预设（Prometheus-Spec 已设默认）＋子代理模型 override
 - **#17 试跑草稿目录文档化**（已完成 2026-10-18）：dsh-adaptation-drafts README＋台账索引；产物含 install-stack.md v1.2（跨设备安装手册，DSH 核心 >=0.2.1-rc.2 <0.2.2）
@@ -21,18 +23,21 @@ node-architect：把"设计先行 + 节点存档 + 读档恢复"的长项目协�
 
 | 会话 | 负责 | 更新时间 |
 |---|---|---|
+| dsh-next-mig（本机·DeepSeek NEXT） | ✅ 节点 #30、#31 双收口；余留：残缺备份 zip（E:\dsh-backup\dsh-home-2026-10-19.zip 仅986条）处置、两处旧残留目录、C:\Users\tc\.dsh 归档、E:\.dsh 活数据备份、可选全量重链退役 v10 store——待用户选择 | 2026-10-19 |
 | pidesktop-gemini（本机） | ✅ 节点 27/28/29 三连收口：双槽→双轨防线→迁 openchamber 拍板；等 build-relay 落地实测 | 2026-10-18 |
-| main（另一设备） | #16/#17 收口归档＋install-stack 手册推送；改名调查未找到官方证据，已问用户来源 | 2026-10-19 |
+| main（另一设备） | #16/#17 收口归档＋install-stack 手册推送；改名调查已闭环（见节点30） | 2026-10-19 |
 | main / main-n19（本机旧档） | 节点 16/17/18/19 待验收 | 2026-10-09 |
 
 ## 关键路径提醒
 
 - **双机并行已实证**：会话名 main 两机共用，SESSIONS/main.md 双写——存档后立即 commit/push，开工先 pull；推送走代理 `git -c http.proxy=http://127.0.0.1:7892 push origin main`
 - **双母版维护（唯一正道）**：改母版 → `sync-skills.ps1`（17 项校验）→ `pack.ps1` → commit/push；母版 .ps1 新代码 ASCII-only
-- **save.ps1 跨项目调用必须显式 -Project**；受限令牌下锁创建被拒，需 full access
+- `save.ps1` 跨项目调用必须显式 -Project`；受限令牌下锁创建被拒，需 full access
+- **profile 装插件铁律（#31 实测）**：node_modules 记录里的 store 必须与操刀 pnpm 的大版本一致（DSH 自带 11.8.0 → `E:\.pnpm-store\v11`）；**禁用 PATH 上的 pnpm 10.32.1 在 `E:\.dsh\profiles\desktop` 里 install**（一次即把记录写回 v10、市场即刻全拒）；诊断三件套＝`.modules.yaml`（记录值）+ 市场 `log.ndjson`（错误码）+ `.plugin-manager/logs/<op>/pnpm.log`（真实命令行）
 - **DSH 适配资产（#16 交付，勿手改承重目录）**：`.agents/skills/{pi-tempo,prometheus-spec}/`、`.dsh/skills/node-run.md`、`research/dsh-adaptation-drafts/`；改动走「模板→装配脚本→YAML 校验」
-- **install-stack 手册**（research/dsh-adaptation-drafts/）：跨设备装主力栈；判据以版本字段/目录/工具名为准（产品更名 DeepSeek NEXT 未验证，engines 闸拒装）
-- **CPA 渠道档位**：Google /v1beta 收嵌套 thinkingConfig.thinkingLevel；配置在 ~/.pi-desktop/pi.sqlite providers 表
+- **install-stack 手册**（research/dsh-adaptation-drafts/）：跨设备装主力栈；判据以版本字段/目录/工具名为准（产品更名 DeepSeek NEXT **已证实**：用户口径 2026-10-19；本机 2.0.19-next 数据家目录＝E:\.dsh，DSH_HOME 进程注入）
+- **DSH NEXT 数据迁移要点（节点#30 实测）**：会话=`.dsh\sessions\<slug>\session-<uuid>\session.vN.jsonl.zstd`（v0–v4 全兼容）；标题/列表头=`storages\session_projcache\sessions\session-<id>.json`（缺失显示「未命名」，可从日志 refold）；分组=`storages\workspace.json`（应用运行时持有内存态会回写，**外部修改必须先完全退出应用**）
+- **CPA 渠道档位**：Google /v1beta 收嵌套 thinkingConfig.thinkingLevel；配置在 ~/.pi-desktop/pi.sqlite providers 表；DSH NEXT 侧渠道凭据在 E:\.dsh\.credentials.yaml
 - **本机 ~/.dsh gemini-lean v12**（2026-09-26）：wire 16 需重启 DSH 桌面生效；回滚见 DECISIONS 09-26 两条
 - **执行分工（节点 29 起）**：openchamber prometheus-spec 规划＋build-relay 接力执行；PI-Desktop /node-run 仅自干与复审
 
@@ -43,3 +48,4 @@ node-architect：把"设计先行 + 节点存档 + 读档恢复"的长项目协�
 3. 二期 policy 插件（fs 路径闸门，触发=越权写证据）／bundle 迁正式位＋母版合流
 4. #274/R1 验收；节点 19/17/18/16 验收；上游三案待发
 5. 遗留：gemini-lean v12 实测、pi-speed/pi-statusbar、pi-gemini-tuning 双源合并、#12 dsh-mcp skill
+6. （可选）#31 遗留：退出 DSH 后用自带 pnpm 11 `install` 全量重链 node_modules 到 v11 store，方可退役 `E:\.pnpm-store\v10`（918MB，现被 node_modules 硬链接占用，直接删不省空间）
