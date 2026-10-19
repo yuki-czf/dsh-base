@@ -1,0 +1,237 @@
+# @local/dsh-prometheus-spec — DSH 主力栈适配 批B bundle（蓝图 research/dsh-desktop-adaptation.md §4 B1/B2）
+# v1.2.0：预设带主/子智能体层级标注——Prometheus-Spec=主智能体（会话级，对应 openchamber 的 plan/build 层）；
+#         librarian / gemini-fixer / gemini-scout / independent-review=子代理（主智能体经 subagent(agent_preset=…) 派发）。
+# 两条 agent 预设：
+#   preset-prometheus-spec —— 规划者（persona 短前缀 + 项目级 skill 承载全文；fs 全量挂以写 changes/ 五件套，
+#                             越界写由 persona 闸门口径约束，物理路径闸门属二期 policy 插件）
+#   preset-librarian       —— 开源调研员（persona 全文 + 只读工具面：fs 只读 write:false/edit:false，
+#                             官方 minimal 预设同款形态；无任何写工具、无 subagent）
+# tool-subagent 行＝查原行（dsh-web-app presets/standard.patch.yml delegation 组）后整块重述 config
+#   （provider/toolName/modelSelectionSettings 三字段照抄）再 +allowedAgentPresets 四元
+#   （librarian/gemini-fixer/gemini-scout/independent-review，v1.1.0 四棒实体化起）。
+# compaction 组照抄出货预设（standard/ptc/minimal 均带；长访谈防上下文爆仓）。
+
+- insert:
+    - id: preset-prometheus-spec
+      name: '@deepseek-ai/dsh-agent-preset'
+      config:
+        id: prometheus-spec
+        name: Prometheus-Spec（主智能体）
+        description: 主智能体（会话级，对应 openchamber 的 plan 位）：调研访谈并产出 changes/ 五件套工作计划，不写实现代码；第一步加载 prometheus-spec skill。开新会话直接选它对话，调研与执行由它派子代理完成。
+        order: 20
+        plugins:
+          - id: persona
+            name: '@deepseek-ai/dsh-persona'
+            config:
+              prefix: |-
+__A5_BLOCK__
+          - id: skill-filesystem
+            name: '@deepseek-ai/dsh-skill-filesystem'
+          - id: tool-skill
+            name: '@deepseek-ai/dsh-tool-skill'
+          - id: tool-fs
+            name: '@deepseek-ai/dsh-tool-fs'
+          - id: tool-fs-search
+            name: '@deepseek-ai/dsh-tool-fs-search'
+            config:
+              sampleOverCapGlobResults: false
+          - id: tool-web
+            name: '@deepseek-ai/dsh-tool-web'
+            config:
+              fetch: true
+              searchTimeoutMs: 60000
+          - id: tool-subagent
+            name: '@deepseek-ai/dsh-tool-subagent'
+            config:
+              provider: spawn
+              toolName: subagent
+              modelSelectionSettings: true
+              allowedAgentPresets:
+                - librarian
+                - gemini-fixer
+                - gemini-scout
+                - independent-review
+          - id: tool-todo
+            name: '@deepseek-ai/dsh-tool-todo'
+            config:
+              allowParallelInProgress: true
+          - id: present
+            name: '@deepseek-ai/dsh-tool-present'
+          - id: compaction
+            name: cordis:group
+            group: true
+            isolate:
+              compaction: true
+              toolResultPruner: true
+            config:
+              - id: compaction-basic
+                name: '@deepseek-ai/dsh-compaction-basic'
+              - id: command-compact
+                name: '@deepseek-ai/dsh-command-compact'
+              - id: tool-result-pruner
+                name: '@deepseek-ai/dsh-compaction-tool-result-pruner'
+                config:
+                  thresholdChars: 8192
+                  headChars: 4096
+                  tailChars: 1024
+
+    - id: preset-librarian
+      name: '@deepseek-ai/dsh-agent-preset'
+      config:
+        id: librarian
+        name: Librarian（子代理）
+        description: 子代理（主智能体经 subagent(agent_preset='librarian') 派发，不作会话主智能体）：开源代码库调研，证据必须带 GitHub permalink；只读工具面（web + fs 搜索/读），无任何写工具。
+        order: 21
+        plugins:
+          - id: persona
+            name: '@deepseek-ai/dsh-persona'
+            config:
+              prefix: |-
+__A6_BLOCK__
+          - id: tool-fs
+            name: '@deepseek-ai/dsh-tool-fs'
+            config:
+              read: true
+              readImage: true
+              write: false
+              edit: false
+          - id: tool-fs-search
+            name: '@deepseek-ai/dsh-tool-fs-search'
+            config:
+              sampleOverCapGlobResults: false
+          - id: tool-web
+            name: '@deepseek-ai/dsh-tool-web'
+            config:
+              fetch: true
+              searchTimeoutMs: 60000
+          - id: compaction
+            name: cordis:group
+            group: true
+            isolate:
+              compaction: true
+            config:
+              - id: compaction-basic
+                name: '@deepseek-ai/dsh-compaction-basic'
+
+    # ── 四棒实体化（用户决策 2026-10-18，蓝图 B2 之上的设计升级）──────────────
+    # 三个执行棒从「prompt 模板」升级为 preset 实体：固定纪律（A2 正文）由 persona
+    # 常驻承载，派发 prompt 只带六段简报；模型钉死仍不可能（preset 无 model 字段），
+    # provider/model 照旧在调用层传。工具面按 PI-Desktop 原定义映射：
+    #   fixer  = Read/Glob/Grep/Edit/Write/Bash → fs 全量 + fs-search + pwsh
+    #   scout  = Read/Glob/Grep/Bash(只读)      → fs 只读 + fs-search + pwsh
+    #   review = Read/Glob/Grep                  → fs 只读 + fs-search（无 shell）
+    # pwsh 带 standard 同款平台守卫（本部署为 Windows）。
+
+    - id: preset-gemini-fixer
+      name: '@deepseek-ai/dsh-agent-preset'
+      config:
+        id: gemini-fixer
+        name: Gemini-Fixer（子代理）
+        description: 子代理（subagent(agent_preset='gemini-fixer') 派发）：实现工——只改授权文件集，自跑最小验证，回报改动+验证+风险（fs 全量+pwsh；无 web、不派子代理）。
+        order: 22
+        plugins:
+          - id: persona
+            name: '@deepseek-ai/dsh-persona'
+            config:
+              prefix: |-
+__FIXER_BLOCK__
+          - id: tool-fs
+            name: '@deepseek-ai/dsh-tool-fs'
+          - id: tool-fs-search
+            name: '@deepseek-ai/dsh-tool-fs-search'
+            config:
+              sampleOverCapGlobResults: false
+          - id: tool-pwsh
+            name: '@deepseek-ai/dsh-tool-pwsh'
+            disabled: !!js process.platform !== 'win32'
+          - id: compaction
+            name: cordis:group
+            group: true
+            isolate:
+              compaction: true
+            config:
+              - id: compaction-basic
+                name: '@deepseek-ai/dsh-compaction-basic'
+
+    - id: preset-gemini-scout
+      name: '@deepseek-ai/dsh-agent-preset'
+      config:
+        id: gemini-scout
+        name: Gemini-Scout（子代理）
+        description: 子代理（subagent(agent_preset='gemini-scout') 派发）：只读测绘——大范围搜集事实，回报带 path:line 的证据（只读+pwsh 只读命令；无写工具）。
+        order: 23
+        plugins:
+          - id: persona
+            name: '@deepseek-ai/dsh-persona'
+            config:
+              prefix: |-
+__SCOUT_BLOCK__
+          - id: tool-fs
+            name: '@deepseek-ai/dsh-tool-fs'
+            config:
+              read: true
+              readImage: true
+              write: false
+              edit: false
+          - id: tool-fs-search
+            name: '@deepseek-ai/dsh-tool-fs-search'
+            config:
+              sampleOverCapGlobResults: false
+          - id: tool-pwsh
+            name: '@deepseek-ai/dsh-tool-pwsh'
+            disabled: !!js process.platform !== 'win32'
+          - id: compaction
+            name: cordis:group
+            group: true
+            isolate:
+              compaction: true
+            config:
+              - id: compaction-basic
+                name: '@deepseek-ai/dsh-compaction-basic'
+
+    - id: preset-independent-review
+      name: '@deepseek-ai/dsh-agent-preset'
+      config:
+        id: independent-review
+        name: Independent-Review（子代理）
+        description: 子代理（subagent(agent_preset='independent-review') 派发）：独立复审——对抗式审查、逐条核对验收、按阻断/有条件通过/通过分级（只读；无 shell、无写工具、无 web）。
+        order: 24
+        plugins:
+          - id: persona
+            name: '@deepseek-ai/dsh-persona'
+            config:
+              prefix: |-
+__REVIEW_BLOCK__
+          - id: tool-fs
+            name: '@deepseek-ai/dsh-tool-fs'
+            config:
+              read: true
+              readImage: true
+              write: false
+              edit: false
+          - id: tool-fs-search
+            name: '@deepseek-ai/dsh-tool-fs-search'
+            config:
+              sampleOverCapGlobResults: false
+          - id: compaction
+            name: cordis:group
+            group: true
+            isolate:
+              compaction: true
+            config:
+              - id: compaction-basic
+                name: '@deepseek-ai/dsh-compaction-basic'
+
+# ── 子代理模型选择开关（v1.3.0）────────────────────────────────────────────
+# GUI 路径（设置→内置插件→子智能体→模型选择）在 Desktop 构建不渲染该卡片
+# （插件页为只读清单，见 discrepancies #14）→ 在此直写 Host 行 config，效果等同。
+# 仅影响新会话；GUI 卡片若将来渲染出来，读到的就是这个值，可继续用 GUI 改。
+
+- id: subagent-model-selection-settings
+  config:
+    enabled: true
+    allowedModels:
+      - provider: vps-direct
+        model: gemini-3.8-flash
+      - provider: zai-coding-cn
+        model: glm-5.3-flash
