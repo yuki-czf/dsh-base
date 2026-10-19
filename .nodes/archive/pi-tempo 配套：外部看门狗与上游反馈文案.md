@@ -1,0 +1,23 @@
+# 节点归档：pi-tempo 配套：外部看门狗与上游反馈文案
+
+- **周期**：2026-10-17 → 2026-10-17（单会话 a4cb1b87 第三段）
+- **验收结果**：①watchdog 五规则（R1 同签名连败≥3／R2 上下文>25 万／R3 回合 running>25min／R4 单回合工具>45 次／R5 15 分钟内≥3 error 回合）fixture 端到端全触发 ✅ ②真库冒烟：83 会话文件识别 1 活跃、状态行如实报 ctx/连败、无误报 ✅ ③toast 通道真机验证 exit 0 ✅ ④watchdog 三件套入库 `pi-tempo/watchdog/` ✅ ⑤README 补 v1.0.3–v1.0.5 版本记录与组件行 ✅ ⑥三案上游 issue 文案落 `pi-tempo/upstream-issue-draft.md` ✅ ⑦3 个积压提交（v1.0.3–v1.0.5）已推 origin/main（2b70caa）+ 本节点改动提交 ✅
+- **改动了什么**：
+  - `pi-tempo/watchdog/watchdog.mjs`（12.6KB）：外置看门狗本体——tail sessions/*.jsonl（完整 args+isError+meta.usage）+ 只读轮询 pi.sqlite turns；五规则；WinRT toast（-EncodedCommand UTF-16LE→B64 防代码页乱码）；同键 10 分钟冷却、每键最多弹 3 次后留痕；启动回填只建态不弹窗；CLI 全阈值可覆盖，`--once` 兼作状态命令
+  - `pi-tempo/watchdog/start.ps1`：常驻启动器（隐藏窗口+崩溃 5s 拉起+运行日志）
+  - `pi-tempo/watchdog/README.md`：规则表/数据源口径/留痕/实测记录/为什么不做成插件
+  - `pi-tempo/README.md`：组件表加 watchdog 行；版本节补 v1.0.3（失败熔断）/v1.0.4（会话熔断线 25 万）/v1.0.5（接力模式）
+  - `pi-tempo/upstream-issue-draft.md`：三案英文文案——A 扩展/hooks API（packages 数组宿主不消费+pi.on 全无的证据链）、B 压缩阈值可配（92% 触发死区+compactAfterTokens* 键 0 命中）、C 工具输出治理（43 次未过滤 Bash→50 万上下文）
+  - 档案：PROGRESS 节点 24 行、DECISIONS 两条目（+trim 到 195 行）、SESSIONS 第三段、CONTEXT 换版（节点 21/22 行合并，60 行内）
+- **踩坑记录**：
+  - **本会话三次 Edit 行号错位**（fire() 残留/const files 被吞/插入点落进函数体）——当时会话上下文已 55 万 token，正是 pi-tempo 说的注意力衰减实况；教训=**行号必须来自刚读的 tag，不能用写入负载反推；同路径三次失败就停手术编辑改整文件 Write**（这也是看门狗 R2 想抓的场景，被抓对象是写看门狗的人）
+  - tool.log 无命令正文、pi.sqlite messages.text 对工具行为 null——命令签名只能从 sessions JSONL 拿
+  - PS 5.1 不认 `&&`；toast 文案走 B64 编码否则代码页乱码
+  - save 体积闸门：节点 22 的 PROGRESS 行 1142 字符且 trim-progress 报 unparsable tail——手工按同规则滚出到 archive/progress-rows-2026-10-17.md
+- **执行效率复盘**：核心开发+测试约 40 分钟；最大浪费=上述三次 Edit 失败（约 8 分钟+三次重写）——55 万上下文里的必然税，反过来给熔断论点补了自体案例。可复用结论：**fixture 端到端（两阶段 append+stale 校验）一次验五规则，比五次单测便宜**
+- **遗留**：
+  - 上游三案待用户发出（文案备好，发出前核对版本号）
+  - v1.0.5 接力模式待真实大节点（>40 分钟）实测：主线程上下文 ≤10 万／六段简报齐全／ANCHOR 带本批上限
+  - 看门狗是轮询式只能通知不能干预；上游若开放 hooks 可回收 R3/R5
+  - pi-gemini-tuning/ 与 pi-tempo/skill/ 双源重叠是否合并待用户定
+- **给下个节点的衔接说明**：开工先跑 `E:\www\dsh-base\pi-tempo\watchdog\start.ps1`（或 `node watchdog.mjs --once` 看状态）；上游 issue 从 `pi-tempo/upstream-issue-draft.md` 三案拆发；真实节点复测指标见 DECISIONS「验收指标」条，大节点加测接力模式三数。

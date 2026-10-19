@@ -1,7 +1,7 @@
 # 项目快照 CONTEXT
 
-> 本文件是项目的一页纸快照，任何会话开工前必读。永远保持一屏以内，细节放 archive/。
-> 最后更新：2026-09-26（由 node-architect 存档流程维护）
+> 本文件是项目一页纸快照，任何会话开工前必读。永远保持一屏以内，细节放 archive/。
+> 最后更新：2026-10-18（由 node-architect 存档流程维护）
 
 ## 项目一句话
 
@@ -9,38 +9,31 @@ node-architect：把"设计先行 + 节点存档 + 读档恢复"的长项目协�
 
 ## 当前节点
 
-- **节点 16**：`共享MCP-ssh-runner-DSH`（待验收）——ssh-runner installer 增补 DSH 客户端：`-Clients dsh` 生成 DSH Agent 预设（完整组装 + `# >>> dsh-mcp-shared:ssh` 受管块），`-DshProjectPreset` 写 `<项目>\.dsh\agent-presets\` 并在 profile patch 幂等登记 roots
-- **设计要点**：
-  1. DSH 没有项目级 MCP 配置层 → 项目级 opt-in 的唯一载体是 **Agent 预设**（`agent-presets` 按 agent 作用域挂载）；预设必须是完整组装，故生成器 = 基座全文 + 受管块
-  2. 基座发现顺序：`-DshPresetSource` 显式 → `$DshHome\.agent-presets\standard\agent.cordis.yml` → DSH 安装目录 `...\dsh-agent-presets\presets\standard\agent.cordis.yml`
-  3. 默认写用户根 `$DshHome\.agent-presets\<项目>-ssh\`（零额外配置即被 DSH 发现）；`-DshProjectPreset` 才是"文件随仓库走"+roots 登记
-  4. 幂等 = 受管块整块替换（块外逐字节保留）；`preset.yml` 已存在不覆盖
-- **开工侦察结论**（小节点，无批次计划，落此）：① 测试基建 = 无（仓库仅 `_diag/` 备份里一个 test），门禁改为自建 temp 沙箱脚本；② 无新依赖；③ 门禁合并成一条：temp 项目 × temp `DSH_HOME` 跑两遍 + 哈希比对 + YAML/JSON 解析
+- **节点 29**：`四连败封盘：接力执行迁 openchamber permissions 硬闸`（**已完成** 2026-10-18，会话 pidesktop-gemini；细节 archive 同名）——274R1（v1.0.10 首弹，53.9m）确认装载仍双轨（35E+41B／ctx 320k／自检 0/4）→ **提示词层方案封盘**（272R1→272R2→274→274R1 四连）；方向 B 拍板：openchamber build-relay agent（permissions 工具级硬闸，话术已交用户）；PI-Desktop 退居规划＋复审＋验收
+- **节点 28**：`v1.0.10 双轨自检与返工棒`（已完成 2026-10-18）——首弹即败，结论沉淀于节点 29
+- **节点 27**：`委派双槽与三层闸门`（已完成 2026-10-18）——node-architect **v1.13.3**（规划端治理有效：274 档案全合规）
+- **节点 26/25/24/23**：sync-skills 同步器／执行接力档案化／外部看门狗／pi-tempo 体系（均已完成）
+- **节点 19**：`事故速查与派活纪律`（待验收，v1.10.1）
 
 ## 活跃会话
 
 | 会话 | 负责 | 更新时间 |
 |---|---|---|
-| main | 节点 16 跨客户端共享 MCP（ssh-runner 增补 DSH 客户端，待验收） | 2026-09-22 |
-| perf-gemini-lean | 一次性委托（mubai）+ TTFT 续篇（OpenCode）：Gemini 载荷与行为改造 v3+v12 已落地（详见 SESSIONS/perf-gemini-lean.md 与 _diag/gemini-perf/REPORT.md） | 2026-09-26 |
-| opencode-main | 云端线 ssh-runner / remote-install（历史，GitHub 侧） | 2026-08-22 |
+| pidesktop-gemini | ✅ 节点 27/28/29 三连收口（10-18）：双槽→双轨防线→迁 openchamber 拍板；下一步等 build-relay 落地实测 | 2026-10-18 |
+| main / main-n19 | 节点 16/17/18/19 待验收 | 2026-10-09 |
 
 ## 关键路径提醒
 
-- **工作区是正式 git 克隆**（main ↔ origin/main）：开工先 `git pull`；改完 commit/push；凭据走 Windows 凭据管理器（lapland1009）
-- **维护正向流程**：只改母版 `node-architect\skill\` → 重跑 `install.ps1` → `pack.ps1` 刷新 dist → 根 `dist\` 安装包与 README 引用同步换版 → commit/push
-- **别项目更新话术**：任意项目说「更新节点协议」→ 全局引导跑母版 install.ps1（幂等，`.nodes` 档案保留）；改触发词后重跑 `-Bootstrap`（写 C 盘，DSH 沙箱内需提权）
-- 母版 .ps1 保持 BOM；**新增代码块一律 ASCII-only（CJK 用 \uXXXX 转义）**防剥 BOM 后 PS 5.1 ANSI 解析碎裂；PS 单引号串内禁 `<>`；remote-install.ps1 纯 ASCII 无 BOM
-- git 约定：autocrlf=true（仓库 blob LF / Windows 检出 CRLF）；`.gitignore` 忽略本地工作态（.sisyphus/.zcode/_diag/tmp-zcode-e2e/.opencode 生成物/node_modules）
-- 版本号唯一真源 = `skill/SKILL.md` frontmatter；PROTOCOL/AGENTS 由 init 运行时注入；verify 的 `-Node` 用无斜杠短名
-- 大任务两套范式二选一（询问制）：spec-superflow 或 分批约定；命令速查见 `skill/references/QUICKREF.md`
-- **DSH 插件开发坑**（详见 archive/dsh-plan-popup.md）：pnpm file: 副本 inode 不同步、缺 `dsh.client` 声明则浏览器拿不到模块、Shadow DOM 穿透、DOM 自排除、新增 bundle 必须重启
-- **本机 ~/.dsh gemini-lean 已到 v12**（2026-09-26）：wire 名单 16（subagent 放行，**需重启 DSH 桌面生效，可调性待实测**）；rulesText 含 plan-first+技能按需（热改已生效）；TSCG 压缩已实测否决（真实目录仅省 0.3%）；standard 会话零影响；回滚 = `.bak-dsh-v12-20260926`（yml）+ `host.js.bak-v11` + 删 rulesText 两行。CPA 侧（家里）：connection-pool 已开、preview 静默切换已关、session-affinity 维持关（实测否决）。教训：工具目录真源是 `system-prompt/assemble` 瀑布（详见 DECISIONS 2026-09-26 两条）
+- **工作区是正式 git 克隆**：开工先 `git pull`；**推送走代理 `git -c http.proxy=http://127.0.0.1:7892 push origin main`**；`.nodes` 档案入库待用户定
+- **双母版维护（唯一正道）**：改母版 → `sync-skills.ps1`（17 项校验）→ `pack.ps1`（node-architect 有改动时）→ commit/push；母版 .ps1 新代码 ASCII-only
+- **save.ps1 跨项目调用必须显式 -Project**；跑法=`powershell.exe -NoProfile -ExecutionPolicy Bypass -File <save.ps1> …`
+- **CPA 渠道档位**：Google /v1beta 收嵌套 `thinkingConfig.thinkingLevel`；生效配置在 ~/.pi-desktop/pi.sqlite providers 表
+- **pi-tempo v1.0.10（全局）**：执行槽闸＋接力（2.5）＋并行批（2.6）＋双轨自检与返工棒（2.7）——**提示词层已到顶，接力主会话不再用 PI-Desktop 跑**；看门狗六规则运行中
+- **执行分工（节点 29 起）**：openchamber prometheus-spec 规划＋build-relay 接力执行（permissions 硬闸）；PI-Desktop /node-run 仅自干节点与复审验收
 
 ## 下一步
 
-1. **gemini-lean v12 实测**：重启 DSH 桌面 → 新 lean 会话验收（wire 16 / adaptive 掩码日志 / subagent 真调 / 首步 plan-first）→ 与家里侧 CPA-Manager 数据会师 A/B（同任务双端对质 TTFT/缓存命中）
-2. **节点 16**：收口（状态 待验收，等用户在 GUI 选一次预设确认工具可见）
-3. DSH 插件侧遗留：节点 8 待验收；节点 7 并入 8 验收
-4. 并行遗留：节点 3（L2 桥接）进行中——batch-executor 已退役，L2 桥接与派生相关结论按 v1.5.0 口径复核
-5. 云端线遗留：#12 dsh-mcp skill（AI 纪律层）**待开始**（与本节点互补：#11 installer 生成器 + #12 纪律层）；新校验（侦察段/校准日志/归档占位符）尚未在真实批次中跑过
+1. **build-relay agent 落地**（用户在 openchamber 按话术创建）→ 275 号节点全链实测：openchamber 规划→build-relay 照单循环→PI-Desktop 复审；对账：主会话（build-relay）源码 Edit=权限层拒绝数、ctx、墙钟、棒成功率
+2. **#274/R1 实施结果用户验收**（reddit-trend-tc 真机）；两外仓同步产物待各自 commit
+3. 节点 19/17/18/16 验收；上游三案待发（`pi-tempo/upstream-issue-draft.md`）
+4. pi-speed/pi-statusbar 插件遗留；pi-gemini-tuning/ 双源合并待用户定
