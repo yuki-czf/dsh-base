@@ -11,6 +11,7 @@
   save.ps1 verify -Node 跑通登录流程 -Session main [-Completed]
   save.ps1 verify-batch -Node 跑通登录流程 -Session main -Batch 2
   save.ps1 checkpoint -Node 跑通登录流程 -Session main -Recon "..." [-Note "..."]
+  save.ps1 finish -Node X -Session main -Status "..." -ContextFile ctx-tmp.md [-Note "..."] [-Decision "..."] [-Recon "..."]
   save.ps1 review-audit [-Over 14]
   save.ps1 check-tombstone
   save.ps1 next-node -Node <name> [-Accept <criteria>] [-Session <session>]
@@ -24,7 +25,7 @@
 #>
 param(
   [Parameter(Mandatory = $true, Position = 0)]
-  [ValidateSet('lock', 'unlock', 'verify', 'verify-batch', 'commit', 'save', 'checkpoint', 'review-audit', 'check-tombstone', 'trim-decisions', 'trim-context', 'trim-progress', 'next-node')]
+  [ValidateSet('lock', 'unlock', 'verify', 'verify-batch', 'commit', 'save', 'finish', 'checkpoint', 'review-audit', 'check-tombstone', 'trim-decisions', 'trim-context', 'trim-progress', 'next-node')]
   [string]$Action,
   [string]$Project = (Get-Location).Path,
   [string]$Session = 'main',
@@ -35,6 +36,8 @@ param(
   [switch]$Completed,
   [string]$Note = '',
   [string]$Recon = '',
+  [string]$Status = '',
+  [string]$Decision = '',
   [string]$Accept = '',
   [int]$Over = 14,
   [switch]$Apply,
@@ -79,6 +82,12 @@ if ($Action -eq 'checkpoint') {
 }
 if ($Action -eq 'next-node') {
   if (-not $Node) { throw 'next-node requires -Node <name>' }
+}
+if ($Action -eq 'finish') {
+  if (-not $Node) { throw 'finish requires -Node' }
+  if (-not $Status) { throw 'finish requires -Status "<new PROGRESS status text>"' }
+  if (-not $ContextFile) { throw 'finish requires -ContextFile <path to staged CONTEXT.md content>' }
+  if ($Status -match '\|') { throw '-Status must not contain the pipe character (would break the PROGRESS table row)' }
 }
 
 $lockDir    = Join-Path $nodesDir '.lock.d'
@@ -376,6 +385,20 @@ if ($Action -eq 'next-node') {
     $newN = $maxN + 1
     $statusTxt = -join ([char]0x5F85, [char]0x5F00, [char]0x59CB)
     $acceptTxt = if ($Accept) { $Accept } else { -join ([char]0x5F85, [char]0x8865, [char]0x5145) }
+    # v1.13.3 dual-slot gate: non-empty -Accept must carry an execution slot.
+    # CJK via code points (BOM-less ANSI-parse safety):
+    #   0x6267 0x884C = exec-slot prefix / 0x63A5 0x529B = relay / 0x81EA 0x5E72 0x7406 0x7531 = self-dry reason
+    #   0x59D4 0x6D3E = legacy delegation prefix (legacy relay spelling still accepted)
+    if ($Accept) {
+      $zxAscii = -join ([char]0x6267, [char]0x884C, [char]0x3A)
+      $zxFull = -join ([char]0x6267, [char]0x884C, [char]0xFF1A)
+      $legacyRelay = -join ([char]0x59D4, [char]0x6D3E, [char]0x3A, [char]0x6267, [char]0x884C, [char]0x63A5, [char]0x529B)
+      if (-not ($Accept.Contains($zxAscii) -or $Accept.Contains($zxFull) -or $Accept.Contains($legacyRelay))) {
+        $hintRelay = -join ([char]0x6267, [char]0x884C, [char]0x3A, [char]0x6267, [char]0x884C, [char]0x63A5, [char]0x529B)
+        $hintSelf = -join ([char]0x6267, [char]0x884C, [char]0x3A, [char]0x2014, [char]0x28, [char]0x81EA, [char]0x5E72, [char]0x7406, [char]0x7531, [char]0x29)
+        throw ("Accept text missing execution slot (dual-slot rule v1.13.3, PROTOCOL rule 7). Append '" + $hintRelay + "' (relay: 7-col table required in plans/) or '" + $hintSelf + "' (self-dry with reason).")
+      }
+    }
     $row = "| $newN | $Node | $acceptTxt | $statusTxt | $Session | $(Get-Date -Format 'yyyy-MM-dd') |"
     $sepIdx = -1
     for ($j = 0; $j -lt $lines.Count; $j++) {
@@ -398,6 +421,110 @@ if ($Action -eq 'next-node') {
   if ($failMsg) { Write-Host "[FAIL] $failMsg" -ForegroundColor Red; exit 1 }
   Write-Host $okMsg
   exit 0
+}
+
+# ---------- finish (v1.12.0): one-shot archive close ----------
+# Does in ONE invocation what used to take 5+ tool rounds (weak-model efficiency):
+#   locate PROGRESS row -> projected cap check -> PROGRESS row status/date update
+#   (locked) -> SESSIONS append -> DECISIONS append -> falls through to the
+#   standard save path (cap gate + CONTEXT replace + verify).
+# SESSIONS/DECISIONS writes are lockless by design (session-local / append-only),
+# same convention as checkpoint. Re-run safe: every step is idempotent.
+# CJK via code points (BOM-less ANSI-parse safety):
+#   0x4FA6 0x5BDF = zhen-cha (recon marker)
+if ($Action -eq 'finish') {
+  $ctxSrcF = if ([System.IO.Path]::IsPathRooted($ContextFile)) { $ContextFile } else { Join-Path $Project $ContextFile }
+  if (-not (Test-Path -LiteralPath $ctxSrcF)) { throw "ContextFile not found: $ctxSrcF" }
+  $ctxDstF = Join-Path $nodesDir 'CONTEXT.md'
+  if ((Resolve-Path -LiteralPath $ctxSrcF).Path -ieq (Resolve-Path -LiteralPath $ctxDstF).Path) { throw 'ContextFile must not be the same as CONTEXT.md' }
+
+  # -- locate the PROGRESS row (read-only): node number feeds the DECISIONS heading --
+  $progPathF = Join-Path $nodesDir 'PROGRESS.md'
+  if (-not (Test-Path -LiteralPath $progPathF)) { throw 'PROGRESS.md not found' }
+  $linesF = @((Read-Utf8 $progPathF) -split "`r?`n")
+  $hitsF = @()
+  for ($jF = 0; $jF -lt $linesF.Count; $jF++) {
+    if ($linesF[$jF] -match '^\|' -and $linesF[$jF].Contains($Node)) { $hitsF += $jF }
+  }
+  if ($hitsF.Count -eq 0) { throw "no PROGRESS.md row contains node '$Node'" }
+  if ($hitsF.Count -gt 1) { throw "node '$Node' matches $($hitsF.Count) PROGRESS.md rows - pass the full unique node name" }
+  $cellsF = $linesF[$hitsF[0]] -split '\|'
+  if ($cellsF.Count -ne 8) { throw "PROGRESS.md row for '$Node' is not the strict 6-column format (embedded pipe? got $($cellsF.Count - 2) columns) - update it manually" }
+  $nodeNumF = $cellsF[1].Trim()
+
+  # -- build the projected PROGRESS row (in-memory, BEFORE cap pre-check) --
+  $cellsF[4] = " $Status "
+  $cellsF[6] = " $(Get-Date -Format 'yyyy-MM-dd') "
+  $linesF[$hitsF[0]] = $cellsF -join '|'
+  $progProjF = ($linesF -join "`r`n").TrimEnd() + "`r`n"
+
+  # -- projected DECISIONS (project convention: '## YYYY-MM-DD #<node> title') --
+  # Idempotent: if the exact title line already exists (interrupted re-run), skip.
+  $decPathF = Join-Path $nodesDir 'DECISIONS.md'
+  $decProjF = Read-Utf8 $decPathF
+  $decDupF = $false
+  if ($Decision) {
+    if ($null -eq $decProjF) { throw 'DECISIONS.md not found' }
+    $decTitleF = "## $(Get-Date -Format 'yyyy-MM-dd') #$nodeNumF $Decision"
+    if ($decProjF.Contains($decTitleF)) {
+      $decDupF = $true
+    } else {
+      $decProjF = $decProjF.TrimEnd() + "`r`n`r`n$decTitleF`r`n"
+    }
+  }
+
+  # -- pre-flight cap gate on projected ledgers: fail BEFORE any mutation (exit 4) --
+  $violF = @()
+  try { $violF = @(Get-CapViolations (Read-Utf8 $ctxSrcF) $progProjF $decProjF) } catch { }
+  if ($violF.Count -gt 0) {
+    foreach ($xF in $violF) { Write-Host ("[FAIL] Cap gate: {0} [{1}] {2}" -f $xF.File, $xF.Code, $xF.Detail) -ForegroundColor Red }
+    Write-Host '       Fix: run trim-context / trim-progress / trim-decisions, then re-run finish. Staged ContextFile preserved.' -ForegroundColor Yellow
+    exit 4
+  }
+
+  # -- PROGRESS row update: status + date cells only, under lock --
+  $lockOkF = $false
+  $lrF = $null
+  for ($iF = 0; $iF -lt 30; $iF++) {
+    $lrF = Acquire-Lock $Session
+    if ($lrF.Ok) { $lockOkF = $true; break }
+    Start-Sleep -Seconds 1
+  }
+  if (-not $lockOkF) { Write-Host '[FAIL] Lock busy after 30s - nothing mutated. Re-run finish.' -ForegroundColor Red; exit 1 }
+  try {
+    Write-Utf8 $progPathF $progProjF
+    Write-Host "OK: PROGRESS row #$nodeNumF '$Node' status/date updated"
+  } finally {
+    $rlF = Release-Lock $Session
+    if (-not $rlF.Ok) { Write-Warning $rlF.Message }
+  }
+
+  # -- SESSIONS append (lockless, checkpoint-style) --
+  $zhenChaF = -join ([char]0x4FA6, [char]0x5BDF)
+  $sessDirF = Join-Path $nodesDir 'SESSIONS'
+  if (-not (Test-Path -LiteralPath $sessDirF)) { New-Item -ItemType Directory -Path $sessDirF -Force | Out-Null }
+  $sessPathF = Join-Path $sessDirF "$Session.md"
+  $prevF = Read-Utf8 $sessPathF
+  if ($null -eq $prevF) { $prevF = "# session $Session state" }
+  $partsF = @("- [finish $(Get-Date -Format 'yyyy-MM-ddTHH:mm:ss')] node=$Node status=$Status")
+  if ($Recon) { $partsF += "$zhenChaF=$Recon" }
+  if ($Note) { $partsF += "note=$Note" }
+  Write-Utf8 $sessPathF ($prevF.TrimEnd() + "`r`n" + ($partsF -join ' - ') + "`r`n")
+  Write-Host "OK: SESSIONS/$Session.md updated (finish marker)"
+
+  # -- DECISIONS append (append-only, lockless; idempotent skip when already present) --
+  if ($Decision) {
+    if (-not $decDupF) {
+      Write-Utf8 $decPathF ($decProjF.TrimEnd() + "`r`n")
+      Write-Host "OK: DECISIONS.md appended entry for #$nodeNumF"
+    } else {
+      Write-Host "OK: DECISIONS.md entry for #$nodeNumF already present (idempotent skip)"
+    }
+  }
+
+  # -- CONTEXT replace + verify via the standard save path --
+  Write-Host 'OK: ledger writes complete - falling through to CONTEXT replace + verify'
+  $Action = 'save'
 }
 
 # ---------- trim-context (v1.7.0) ----------
@@ -859,6 +986,36 @@ if ($Node -and (Test-Path -LiteralPath $sessPath)) {
   }
   if (-not $reconOk) {
     Write-Host "  [WARN] No recon marker for node '$Node' in SESSIONS/$Session.md - run: save.ps1 checkpoint -Node <N> -Session <S> -Recon <conclusion> (efficiency protocol)" -ForegroundColor Yellow
+  }
+}
+
+# v1.12.1 delegation gate: a node carrying the review-delegation marker that has
+# reached a done-ish status must show a review trace in SESSIONS (soft WARN only).
+# CJK via \uXXXX escapes for BOM-less ANSI-parse safety:
+#   \u59D4\u6D3E = wei-pai (delegation), \u6536\u53E3\u72EC\u7ACB\u590D\u5BA1 = independent close-out review
+if ($Node -and (Test-Path -LiteralPath $progPath) -and (Test-Path -LiteralPath $sessPath)) {
+  $progTxtDg = Read-Utf8 $progPath
+  $statusDoneDg = $false
+  if ($progTxtDg) {
+    foreach ($dl in ($progTxtDg -split "`r?`n")) {
+      if ($dl -match '^\|' -and $dl.Contains($Node) -and $dl -match '\u59D4\u6D3E:\s*\u6536\u53E3\u72EC\u7ACB\u590D\u5BA1') {
+        $cellsDg = $dl -split '\|'
+        if ($cellsDg.Count -ge 8 -and $cellsDg[4] -match '\u5B9E\u65BD\u5B8C\u6210|\u5DF2\u9A8C\u6536|\u5DF2\u6536\u53E3') { $statusDoneDg = $true }
+        break
+      }
+    }
+  }
+  if ($statusDoneDg) {
+    $sessTxtDg = Read-Utf8 $sessPath
+    $reviewOkDg = $false
+    if ($sessTxtDg) {
+      foreach ($sl2 in ($sessTxtDg -split "`r?`n")) {
+        if ($sl2.Contains($Node) -and $sl2 -match '\u590D\u5BA1') { $reviewOkDg = $true; break }
+      }
+    }
+    if (-not $reviewOkDg) {
+      Write-Host "  [WARN] Delegation gate: node '$Node' carries the review-delegation marker and its status is done, but SESSIONS/$Session.md has no review trace for it. Delegate the close-out review (e.g. code-reviewer subagent) and log the verdict, or write an explicit exemption reason. (v1.12.1)" -ForegroundColor Yellow
+    }
   }
 }
 

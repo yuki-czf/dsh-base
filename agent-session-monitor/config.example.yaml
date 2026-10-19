@@ -1,0 +1,45 @@
+# agent-session-monitor 配置模板
+# 复制为 config.yaml 后修改。凭据优先从环境变量读取：
+#   FEISHU_WEBHOOK_URL / FEISHU_APP_ID / FEISHU_APP_SECRET
+# 本文件不得包含真实凭据（已被 .gitignore 忽略，但仍请保持习惯）。
+
+server:
+  port: 7788                 # 面板端口；不得使用 57123 / 63884
+  host: "0.0.0.0"
+  # 面板鉴权：默认开启；token 建议随机 24+ 位。auth: false 可关闭（不推荐）
+  auth:
+    enabled: true
+    token: "change-me-to-a-long-random-string"
+
+baseUrl: "http://192.168.x.x:7788"   # 卡片跳转地址，必须写局域网 IP，不能写 127.0.0.1
+
+poll:
+  intervalMs: 10000          # 轮询周期 5_000 - 60_000
+  stuckAfterMs: 1800000      # 回合 running 超过 30 分钟 → stuck
+  silenceMs: 60000           # 启动静默期：只建基线不发通知
+  historyDays: 7             # 面板历史范围
+
+adapters:
+  openchamber:
+    enabled: true
+    port: 57123              # OpenChamber HTTP API 端口（重启后若变，在此修改或依赖自动重探测）
+  pi-desktop:
+    enabled: true
+    dbPath: "C:/Users/tc/.pi-desktop/pi.sqlite"
+  zcode:
+    enabled: true
+    dbPath: "C:/Users/tc/.zcode/cli/db/db.sqlite"
+  dsh:
+    enabled: true
+    sessionsDir: "C:/Users/tc/.dsh/sessions"
+
+notify:
+  mergeWindowMs: 600000      # 同会话 10 分钟内多回合合并
+  minGapMs: 3000             # 发送队列最小间隔
+  maxRetries: 3
+  breakerAfterConsecutiveFails: 5
+  backlogDigestThreshold: 5  # 积压超过该数量 → 合并摘要卡
+
+bot:
+  enabled: true              # 需要飞书自建应用凭据；缺失时自动禁用
+  allowedUserIds: []         # 飞书 user_id 白名单；空 = 允许所有（不推荐）

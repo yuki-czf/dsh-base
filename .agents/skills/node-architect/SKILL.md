@@ -1,6 +1,6 @@
 ---
 name: node-architect
-version: 1.10.1
+version: 1.13.3
 description: 长项目节点存档与恢复协议。项目根存在 .nodes/ 时必须启用：会话开工先读档恢复全貌，节点完成、用户要求存档或大改动落地时写存档。也用于用户说"初始化节点协议、存档、恢复进度、开新节点、登记计划节点"时。
 whenToUse: 项目根存在 .nodes/ 目录；或用户要求建立节点化项目管理、执行存档、恢复进度。
 ---
@@ -12,10 +12,18 @@ whenToUse: 项目根存在 .nodes/ 目录；或用户要求建立节点化项目
 ## 铁律（优先级高于一切编码冲动）
 
 1. **开工必读档**：项目根有 `.nodes/` → 动手前先读 `CONTEXT.md` 和 `PROGRESS.md`；对决策有疑问再读 `DECISIONS.md` 最近条目。读完用一两句话向用户复述"当前节点 / 下一步"，确认后再动手。
-2. **节点先行**：任何长于一次会话的工作，先在 `PROGRESS.md` 登记节点（名称 + 验收标准 + owner 会话；登记走 `scripts/save.ps1 next-node` 原子取号——锁内全表扫描取 max+1，防并发撞号），并把下一步的设计要点写入 `CONTEXT.md` 的"下一步"，再写代码。地图先于道路。登记后、写代码前完成**开工侦察**（测试基建盘点 / 新依赖打样 / 门禁合并；结论用 `save checkpoint -Recon` 登记，verify 对缺失者 WARN——见 PROTOCOL「执行效率协议」）。
+2. **节点先行**：任何长于一次会话的工作，先在 `PROGRESS.md` 登记节点（名称 + 验收标准〔末尾带 `执行:`＋`收口:` **委派双槽**，无执行槽登记被拒（v1.13.3）〕+ owner 会话；登记走 `scripts/save.ps1 next-node` 原子取号——锁内全表扫描取 max+1，防并发撞号），并把下一步的设计要点写入 `CONTEXT.md` 的"下一步"，再写代码。地图先于道路。登记后、写代码前完成**开工侦察**（测试基建盘点 / 新依赖打样 / 门禁合并；结论用 `save checkpoint -Recon` 登记，verify 对缺失者 WARN——见 PROTOCOL「执行效率协议」）。
 3. **必须存档的时机**：① 节点验收标准达成；② 用户表达存档意向（"存档 / 这节点差不多了 / 先到这"）；③ 完成大结构改动；④ 出现会话即将结束的迹象。存档走【存档流程】。
 4. **体积纪律（v1.7.0 硬闸门）**：`CONTEXT.md` ≤60 行且每行 ≤6000 字符；`PROGRESS.md` 表格行 ≤600 字符；`DECISIONS.md` ≤200 行。超限时 `save`/`commit` 被 **exit 4 拦截**（10 分钟内同命令重跑放行一次）——按提示跑 `trim-context` / `trim-progress` / `trim-decisions` 滚出到 `archive/` 后重存。细节一律写 `archive/<节点>.md`，核心文件只留一句话状态。
 5. **发现即恢复**：感知到上下文被压缩（出现摘要标记、记忆断裂）→ 立即重读 `CONTEXT.md`、`PROGRESS.md` 和本会话的 `SESSIONS/` 文件，再继续工作。
+
+## 效率条款（弱模型/Flash 级必守）
+
+- **独立工具调用同一批并行发出**：读档 CONTEXT+PROGRESS 一批；验证合并跑项目根 `scripts/gate.ps1`（ruff + vue-tsc 触碰过滤 + vitest/pytest 单命令，自管 UTF-8，杜绝乱码与串行空转）。
+- **脚本路径照抄，禁搜索定位**：`powershell -File .agents/skills/node-architect/scripts/save.ps1 …`（点目录 Glob/Grep 不可见，搜了是白跑）。
+- **失败先查退出码语义**（QUICKREF 退出码表）：exit 4 → 跑 trim-* 后重跑；**空输出 ≠ 成功**，禁止换姿势盲重试。
+- **体积闸门由脚本自动检查**，禁止手工跑行宽/行数检查（多余且输出易乱码）。
+- **委派双槽（v1.13.3）**：登记的验收标准末尾必带执行槽＋收口槽——`执行:执行接力`（预估 >30min 或 ≥3 任务；plans 落七列接力表，执行会话照单派棒**禁主会话写源码**）或 `执行:—(自干理由)`（**没有默认值**；#273 实测「要不要派」永远判自干，只能必填槽强制）；`收口:独立复审`（有新代码默认必做，verify 软校验复审留痕兜底，豁免写理由）。决策表见 AGENTS.md。
 
 ## 节点定义
 
@@ -31,6 +39,16 @@ whenToUse: 项目根存在 .nodes/ 目录；或用户要求建立节点化项目
 ## 存档流程（checkpoint）
 
 按顺序执行；**完成字样时序**：verify 全 [OK] 之前，任何档案不得写入"已完成"类表述。
+
+**快路（推荐，弱模型必走）**：写好 CONTEXT 暂存文件后，一条命令完成全部存档动作（PROGRESS 行状态/日期 + SESSIONS 追加 + DECISIONS 追加 + CONTEXT 替换 + verify）：
+
+```
+save.ps1 finish -Node <节点名> -Session <会话> -Status "<状态短语>" -ContextFile <暂存文件> [-Note "..."] [-Decision "<决策标题>"] [-Recon "..."] [-Completed]
+```
+
+`-Decision` 按项目惯例自动编号 `## 日期 #<节点号> 标题`（多 bullet 的复杂决策请先手工追加完整段落，finish 省略 `-Decision`）；`-Completed` 用于节点完成收口（校验 `archive/<节点名>.md`，先写归档再加此参）。幂等可重跑。
+
+**手工五步（参考路径，批次/复杂归档用）**：
 
 1. **PROGRESS.md**：定向 edit 该节点行（状态、更新时间）
 2. **SESSIONS/<会话>.md**：重写本会话状态
