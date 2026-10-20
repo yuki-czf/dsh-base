@@ -1,4 +1,4 @@
-#Requires -Version 5.1
+﻿#Requires -Version 5.1
 <#
 .SYNOPSIS
   .nodes 存档流程的机械动作：CONTEXT 写锁管理 + 存档完整性校验 + 一键存档/原子收口。

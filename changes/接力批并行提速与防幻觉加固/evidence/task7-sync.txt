@@ -90,3 +90,41 @@ BATCH-PLAN template                    BATCH-PLAN batch primary key             
 Result: All 4 templates confirm first marker is v1.0.11.
 
 --------------------------------------------------------------------------------
+
+[Step 6] Git Commit Record
+Command:
+git commit -m "feat(relay): 批级循环与防幻觉加固 v1.0.11"
+Commit Hash: 00507c6
+Commit Stat Summary:
+ 32 files changed, 920 insertions(+), 69 deletions(-)
+ rename .dsh/skills/{node-run.md => dsh-run.md} (55%)
+ create mode 100644 .nodes/plans/接力批并行提速与防幻觉加固.md
+ create mode 100644 .nodes/relay/接力批并行提速与防幻觉加固/baseline.txt
+ create mode 100644 .nodes/relay/接力批并行提速与防幻觉加固/facts.md
+ create mode 100644 changes/接力批并行提速与防幻觉加固/evidence/task1-deploy-chain.md
+ create mode 100644 changes/接力批并行提速与防幻觉加固/evidence/task2-grep.txt
+ create mode 100644 changes/接力批并行提速与防幻觉加固/evidence/task3-grep.txt
+ create mode 100644 changes/接力批并行提速与防幻觉加固/evidence/task4-grep.txt
+ create mode 100644 changes/接力批并行提速与防幻觉加固/evidence/task5-lab.md
+ create mode 100644 changes/接力批并行提速与防幻觉加固/evidence/task6-checkonly.txt
+ create mode 100644 changes/接力批并行提速与防幻觉加固/evidence/task7-sync.txt
+
+--------------------------------------------------------------------------------
+
+[Step 7] Post-commit git status --porcelain
+Command:
+git status --porcelain
+Exit Code: 0
+Output:
+ M .nodes/SESSIONS/main.md
+?? .agents/skills/talk-human/
+?? .openchamber/
+?? pi-desktop-speed-patch/
+?? pi-gemini-tuning/
+?? pi-speed-meter/
+?? pi-throughput/
+
+Verification:
+All residual items match the verified pre-existing irrelevant dirty items specified in the task briefing.
+No unauthorized items or node artifacts leaked into or remained untracked.
+================================================================================
