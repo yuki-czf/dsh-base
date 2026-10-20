@@ -171,6 +171,32 @@ if ($bpExists) {
 }
 Add-Result 'BATCH-PLAN template' 'BATCH-PLAN batch primary key' $bpOk
 
+# 5. save.ps1 BOM + PS5.1 parse guard (BOM loss incident 2026-10-20)
+$saveGuards = @(
+  @{ where = 'save.ps1 master';       path = (Join-Path $root 'node-architect\skill\scripts\save.ps1') },
+  @{ where = 'save.ps1 dsh-base';     path = (Join-Path $root '.agents\skills\node-architect\scripts\save.ps1') },
+  @{ where = 'save.ps1 reddit';       path = 'E:\www\reddit\reddit-trend-tc\.agents\skills\node-architect\scripts\save.ps1' },
+  @{ where = 'save.ps1 pi-tempo-lab'; path = 'E:\www\pi-tempo-lab\.agents\skills\node-architect\scripts\save.ps1' }
+)
+foreach ($g in $saveGuards) {
+  $okFile = Test-Path $g.path
+  $bomOk = $false
+  $parseOk = $false
+  if ($okFile) {
+    $bytes = [System.IO.File]::ReadAllBytes($g.path)
+    $bomOk = ($bytes.Length -ge 3 -and $bytes[0] -eq 0xEF -and $bytes[1] -eq 0xBB -and $bytes[2] -eq 0xBF)
+    $errs = $null
+    $toks = $null
+    [void][System.Management.Automation.Language.Parser]::ParseFile($g.path, [ref]$toks, [ref]$errs)
+    $parseOk = (-not $errs) -or ($errs.Count -eq 0)
+    if (-not $bomOk) { Write-Host ("BOM MISSING: {0}" -f $g.path) }
+    if (-not $parseOk) { Write-Host ("PARSE ERRORS: {0}" -f $g.path) }
+  } else {
+    Write-Host ("MISSING PATH: {0}" -f $g.path)
+  }
+  Add-Result $g.where 'save.ps1 BOM + PS5.1 parse' ($okFile -and $bomOk -and $parseOk)
+}
+
 # ---------- 4) summary ----------
 Write-Host ''
 Write-Host ('==== sync-skills {0} ====' -f $(if ($CheckOnly) { 'CHECK-ONLY' } else { 'DEPLOY+VERIFY' }))

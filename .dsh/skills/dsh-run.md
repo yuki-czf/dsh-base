@@ -3,9 +3,10 @@ name: dsh-run
 description: 执行节点（DSH 版）：先加载节点协议与节奏纪律 skill，再读档→基线快照→接力派棒（subagent 并发+完成通知）→复审→收口存档。用法：斜杠命令面选 dsh-run 或直接说「dsh-run <节点编号或名称> [补充要求]」（原 node-run，DSH NEXT 专用），目标节点写在用户消息里。当用户点名要执行某个已登记节点、或节点行带「执行:执行接力」需要照接力表派棒时使用。
 ---
 
-<!-- pi-tempo v1.0.11 DSH 方言 · 独立血统 dsh-run（node-run=PI-Desktop 血统，语义分家） · 落位 .dsh/skills/dsh-run.md（rank 100，user-invocable 默认开） -->
+<!-- pi-tempo v1.0.12 DSH 方言 · 独立血统 dsh-run（node-run=PI-Desktop 血统，语义分家） · 落位 .dsh/skills/dsh-run.md（rank 100，user-invocable 默认开） · 批内并行=workflow.parallel -->
 <!-- 派发原语：Task/TaskWait → DSH subagent（异步、同消息多调用=并行、完成主动通知）/ workflow parallel·pipeline；存档动作按本机 node-architect v1.13.4（save/checkpoint/commit/verify/verify-batch，无 finish） -->
 <!-- v1.0.11 批级循环：每批一次消息并发派发 ＋ 模型分档 -->
+<!-- v1.0.12 并行原语校正：批内用 workflow.parallel（可带 provider/model）；同步 persona 原语串行、官方异步 subagent 无模型参数 -->
 
 # dsh-run — 执行节点（DSH 版，原 node-run）
 
@@ -44,11 +45,14 @@ description: 执行节点（DSH 版）：先加载节点协议与节奏纪律 sk
    2. 组六段简报（GOAL / 验收 / 文件集+禁区 / 已验证事实 / 验证 / 终止；固定纪律已由 preset persona 常驻承载，简报只带六段）：
       - **回报要求**：每处改动附 `文件路径:行号`，无锚定=报告不完整重派（REQ-H1）。
       - **终止条件**：目标 ≤40 步/棒（TTFT 账：每步 ≈9–11s）；同一失败签名连续 3 次即停。
-   3. **同一条消息并发发出批内全部 subagent 派发（≤3 支）**：
+   3. **批内并行必须用真并行原语（v1.0.12 实测校正）**：执行棒走 `workflow` 的 `parallel()`，一个调用内并列 `agent(prompt, {provider, model})`（≤3 支）：
+      ```js
+      const [a, b] = await parallel([
+        () => agent(<六段简报A>, { label: '棒A', provider: 'cpa', model: 'gemini-3.8-flash' }),
+        () => agent(<六段简报B>, { label: '棒B', provider: 'cpa', model: 'gemini-3.8-flash' }),
+      ]);
       ```
-      subagent(agent_preset='gemini-fixer', prompt=<六段简报>, provider='cpa', model='gemini-3.8-flash')
-      ```
-      （执行棒固定路由＝`cpa/gemini-3.8-flash`。subagent 的 provider/model 参数仅在 Settings→Subagent 模型白名单开启后才出现在 schema 里；若当前会话 schema 无此参数 → 退化派发**不带 provider/model**（继承父会话模型）并在 facts 里记录。`workflow` 的 `parallel()`/`pipeline()` 承载批量编排与 schema 校验。）
+      **禁止用同步子代理原语冒充并行**：`subagent_manager_run`（persona 同步运行）在一条消息里是串行返回（2026-10-20 P0 实测：两棒窗口零重叠、后棒晚 102s 启动），只用于单棒/复审/返工；官方异步 `subagent` 真并行但本会话 schema 无 provider/model 参数（继承父会话模型），仅在不需要模型分档时用。派发后在 facts 记「本批原语＝workflow.parallel / 异步 subagent / 降级串行（原因）」。
    4. 等整批完成通知收敛。
    5. facts 追加（批内逐棒）：把各棒报告事实逐一追加到 `.nodes/relay/<名>/facts.md`（各段 ≤300 字）。
    6. **双轨自检**：`git status --porcelain` 对比基线——判据仍按棒授权集：改动应恰为本批各棒授权集内文件；授权集外有改动或棒报告与工作树不符 → **不是修简报重派，是立即停止接力报告用户**（写 handoff）。
@@ -60,7 +64,7 @@ description: 执行节点（DSH 版）：先加载节点协议与节奏纪律 sk
 
    **等待窗口纪律**：只做四类合法动作，禁读源码本体（读棒报告/facts/接力表即可）。
 
-   **全棒完成 → 复审棒**：`subagent(agent_preset='independent-review', prompt=<复审简报>, provider='cpa', model='deepseek-v4.1-flash')`（审查纪律由 preset persona 常驻；复审简报=验收标准+改动文件清单（`git diff --name-only`）+关键 diff 摘要），**异构模型分档**（复审棒路由＝`deepseek-v4.1-flash`；白名单未开则退化继承父会话模型）；**报告须含逐项行号证据（文件路径:行号），无锚定或报告不完整即重派**。复审发现问题 → 派**单支返工棒**（agent_preset='gemini-fixer'，subagent 派发）吃完所有发现，主会话禁参与返工；返工棒重派 ≥2 次熔断。
+   **全棒完成 → 复审棒**：`subagent_manager_run(agent='independent-review', task=<复审简报>)`（单棒，同步可接受；审查纪律由 persona 常驻；复审简报=验收标准+改动文件清单（`git diff --name-only`）+关键 diff 摘要），**异构模型分档**（复审棒路由＝`deepseek-v4.1-flash`）。**报告须含逐项行号证据（`文件路径:行号: 该行内容`），无锚定或报告不完整即重派；阻断项必须先由调度器 grep 核对摘录原文**——原文不存在＝复审误报，记 facts 后不派返工（2026-10-20 试点实测一次编造行号）。复审确认问题 → 派**单支返工棒**（`subagent_manager_run(agent='gemini-fixer', task=<返工清单>)`）吃完所有发现，主会话禁参与返工；返工棒重派 ≥2 次熔断。
 
    **模型分档（v1.0.11）**：
    - 主会话（调度器）与复审棒建议 `deepseek-v4.1-flash` 速度档（主会话模型由用户建会话时选择，模板只提示）。

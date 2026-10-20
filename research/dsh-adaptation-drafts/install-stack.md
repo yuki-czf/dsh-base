@@ -67,6 +67,32 @@ GUI 兜底：侧栏「插件」页手动安装同目录。
 复制三 skill → `~/.agents/skills/`（rank 500），并按 S2 映射替换副本中路由字样。
 不装则技能仅在本仓库工作区可用（项目级 rank 200 会遮蔽用户级副本——见 §5 边界）。
 
+### DSH NEXT 侧 dsh-run 落位（手工）
+
+> **模板口径说明**：DSH 侧执行模板已更名为 `dsh-run`（仓内母版为 `.dsh/skills/dsh-run.md`，实际加载位为 `E:\.dsh\skills\dsh-run.md`），消除了此前单指 `node-run` 的误导；PI-Desktop 侧仍使用 `node-run`（`.pi/prompts/node-run.md`），两端口径相互独立。
+> **与 sync-skills 的分工**：`sync-skills.ps1` 负责分发全局 skill（`~/.agents/skills/`）、项目内模板（PI 侧 `.pi/prompts/node-run.md`），并逐项目调用 `node-architect\install.ps1` 刷新 `.agents/skills/node-architect` 镜像与 `.nodes\PROTOCOL.md`；**不覆盖** `E:\.dsh\skills\`（零分发、零写入），因此该实际加载位必须手工复制与清理。脚本 3.4 节只读断言只检查两处 `dsh-run.md` 关键句在位与 node-run 残留，**不校验哈希**。
+
+1. **落位与清理命令**（PowerShell）：
+   ```powershell
+   # 复制仓内母版到 DSH NEXT 实际加载位
+   Copy-Item .dsh\skills\dsh-run.md E:\.dsh\skills\dsh-run.md -Force
+
+   # 删除旧版残留（避免 node-run.md 误导）
+   Remove-Item E:\.dsh\skills\node-run.md -ErrorAction Ignore
+   ```
+
+2. **校验命令**（三项均须返回 True / 命中）：
+   ```powershell
+   # ① SHA256 与仓内母版一致
+   ((Get-FileHash .dsh\skills\dsh-run.md).Hash) -eq ((Get-FileHash E:\.dsh\skills\dsh-run.md).Hash)
+
+   # ② 关键句命中（包含「每批一次消息并发派发」）
+   [bool](Select-String -Path E:\.dsh\skills\dsh-run.md -Pattern "每批一次消息并发派发" -SimpleMatch)
+
+   # ③ 目录内无 node-run.md 残留
+   -not (Test-Path E:\.dsh\skills\node-run.md)
+   ```
+
 ### S7 终验清单（代理自检后报告）
 
 ```
@@ -76,6 +102,7 @@ GUI 兜底：侧栏「插件」页手动安装同目录。
 □ S4 五 preset 行 active + override 生效
 □ S5 人设 4/4（若装）
 □ S6 用户级副本（若装）
+□ DSH NEXT 侧 dsh-run 实际加载位校验（E:\.dsh\skills\dsh-run.md 已落位、SHA256 一致、关键句命中、无 node-run 残留）
 □ 新会话冒烟：用户另开一空白会话（预设选 Prometheus-Spec）发「实现一个暗色模式切换」
   → 预期：首步加载 prometheus-spec skill、回应"创建工作计划"、不写码
 ```
@@ -84,7 +111,7 @@ GUI 兜底：侧栏「插件」页手动安装同目录。
 
 - `plugin_manager remove_bundle @local/dsh-prometheus-spec`（+ 卸 tool-management 同法）
 - 删 `~/.dsh/tool-management/subagents/` 下四个人设与 `~/.dsh/dsh-stack/`
-- 用户级 skill 副本：删 `~/.agents/skills/{pi-tempo,prometheus-spec}` 与 `~/.dsh/skills/dsh-run.md`（若做过 S6）
+- 用户级 skill 副本：删 `~/.agents/skills/{pi-tempo,prometheus-spec}`；若做过 DSH 手工落位，再删 `E:\.dsh\skills\dsh-run.md`（旧用户级副本位置为 `~/.agents/skills/`，`~/.dsh/skills/` 仅历史路径）
 - 仓库本体未被修改（S2 起全部动副本），无需还原
 
 ## 5. 已知边界（照搬本仓结论，安装时不需处理）

@@ -3,7 +3,7 @@ description: 执行节点：先加载节点协议与节奏纪律 skill，再读�
 argument-hint: <节点编号或名称> [补充要求]
 ---
 
-<!-- pi-tempo v1.0.11 · 2026-10-20 · 与 skill 同版；改 skill 后同步本模板并递增此行 -->
+<!-- pi-tempo v1.0.12 · 2026-10-20 · 与 skill 同版；改 skill 后同步本模板并递增此行 -->
 
 # /node-run — 执行节点
 

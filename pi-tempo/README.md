@@ -10,7 +10,7 @@ PI-Desktop 的**执行节奏纪律**体系（2026-10-16，节点 23 产出）。
 |---|---|---|
 | `skill/` | **skill**（规则文档） | 十节纪律：Edit 行操作与批量编辑 / Bash 超时 / 退出码判成败 / 最小子集验证 / Grep→Read 一次读够 / 往返预算 / 切分判定 / 子代理调度 |
 | `subagents/` | **subagent 定义**（3 个） | `gemini-scout`（只读测绘·low）/ `gemini-fixer`（可写实现·high）/ `independent-review`（异构家族复审·DeepSeek·只读） |
-| `templates/` | `/node-run` 斜杠模板 | lab 版（node-architect v1.10.1，`save … -Completed`）与 reddit-trend-tc 版（v1.12.x，`finish`） |
+| `templates/` | 执行模板（DSH NEXT 用 `dsh-run`，PI-Desktop 用 `node-run`） | lab 版（node-architect v1.13.4，`save … -Completed`）与 reddit-trend-tc 版（v1.12.x，`finish`） |
 | `watchdog/` | **外置看门狗**（Node 脚本） | 模型外面盯五条线：同签名连败 ≥3 / 上下文 >25万 / 回合 running >25min / 单回合工具 >45 次 / 15 分钟内 ≥3 个 error 回合——触线弹 Windows 通知。宿主无扩展 API，只能外置（README 见 `watchdog/README.md`） |
 
 **pi-tempo 本体是 skill，不是 agent。** 它没有模型、没有工具，只是装进主 Agent 上下文的操作规程；subagent 才是独立会话，由主 Agent 按这份规程调度。
@@ -26,6 +26,7 @@ Copy-Item -Force .\subagents\*.md "$env:USERPROFILE\.agents\subagents\"
 
 # /node-run 模板（按需，放到目标项目；.pi/prompts 是点目录，Git/Glob 对它不可见）
 Copy-Item .\templates\node-run.lab.md <项目>\.pi\prompts\node-run.md
+# 注：DSH NEXT 侧模板改名 dsh-run（仓内 .dsh\skills\dsh-run.md），实际加载位在 E:\.dsh\skills\
 ```
 
 装完重启 PI-Desktop：设置 → 技能 应出现 `pi-tempo`；设置 → 子智能体 应出现三个。子代理所用模型需在 设置 → 模型 里开启 **Available for AI delegation**，否则派发会 `PERMISSION_DENIED`。
@@ -51,7 +52,9 @@ node "$env:USERPROFILE\.agents\skills\pi-tempo\analyze.mjs"
 
 ## 版本
 
-- **v1.0.11**（2026-10-18）：**双轨自检与返工棒**——#274 接力首弹复盘（147min／13 Task／fixer 8/8 全绿，但主会话 78 Edit＋218 Bash＋433 Read 与棒赛写同一批文件：R6 三弹、2 次棒重派、ctx 408.9k、返工尾 33min 仍双轨）。四条规则：①每棒收敛自检——`git status --porcelain` 对比授权集，授权集外改动＝调度器抢写，**停止而非重派**；②等待窗口禁 Read 源码本体；③复审发现→单支返工棒单一 owner 吃完全部发现，主会话禁参与返工；④可选只读模式（会话级只读且不阻 Task 时开工即切，物理剥夺 Edit/Write）。病根收窄定论：判断层（要不要派）已治愈（程序层 100% 照档案执行），唯一残存＝等待窗口白名单失守（R1→R2→274 三连），提示词禁令无效，改用程序化自检步骤＋停止反应。
+- **v1.0.12**（2026-10-20）：**并行原语校正与 BOM 防护**——P0 实测：同步 persona 原语（`subagent_manager_run`）在一条消息内串行（两棒差 102s）、官方异步 `subagent` 真并行但无 provider/model、`workflow.parallel` 同毫秒启动且可带分档；据此改正批内派发口径（SKILL §10 / dsh-run / BATCH-PLAN），复审阻断项须附原文摘录并由调度器 grep 复核（防编造行号）；`sync-skills.ps1` 增 4 份 `save.ps1` 的「BOM 在位＋PS5.1 解析零错误」断言（v1.0.11 编辑丢 BOM 事故防复发）。
+- **v1.0.11**（2026-10-20）：**批级循环、模型分档与防幻觉锚定**——①**批级循环**：接力执行以批为循环单位，每批一次消息并发派发批内全部棒（≤3），整批收敛后统一 facts 追加与越界检查，批内单棒失败不阻塞他棒；②**模型分档（DSH NEXT 侧 dsh-run 模板）**：主会话与收口复审使用 deepseek-v4.1-flash 调度/审计，执行棒使用 cpa/gemini-3.8-flash 扛实现（该项落在 dsh-run，pi-tempo SKILL 本身不含模型字段）；③**防幻觉锚定**：执行棒回报改动必附 `文件路径:行号` 锚定（无锚定或报告不完整即重派），收口复审须对锚点抽检 ≥3 处回查真实代码，沿用 25 万 token 会话熔断线。
+- **v1.0.10**（2026-10-18）：**双轨自检与返工棒**——#274 接力首弹复盘（147min／13 Task／fixer 8/8 全绿，但主会话 78 Edit＋218 Bash＋433 Read 与棒赛写同一批文件：R6 三弹、2 次棒重派、ctx 408.9k、返工尾 33min 仍双轨）。四条规则：①每棒收敛自检——`git status --porcelain` 对比授权集，授权集外改动＝调度器抢写，**停止而非重派**；②等待窗口禁 Read 源码本体；③复审发现→单支返工棒单一 owner 吃完全部发现，主会话禁参与返工；④可选只读模式（会话级只读且不阻 Task 时开工即切，物理剥夺 Edit/Write）。病根收窄定论：判断层（要不要派）已治愈（程序层 100% 照档案执行），唯一残存＝等待窗口白名单失守（R1→R2→274 三连），提示词禁令无效，改用程序化自检步骤＋停止反应。
 - **v1.0.9**（2026-10-18）：**执行槽闸（委派双槽）**——#273 复盘：openchamber 规划端读到 v1.13.2 判据、承认 9 任务 18 文件 >30min，仍以「contract 未声明」自设豁免 → 执行端忠实自干 57min／ctx 498.6k／看门狗 6 弹。修复＝委派拆双必填槽：`执行:执行接力`（>30min 或 ≥3 任务；plans 七列接力表）或 `执行:—(自干理由)`——**没有默认值**，`save.ps1 next-node` 对缺执行槽的 -Accept **硬拒绝**（exit 1；拒绝/放行两路径实测）；/node-run 加 2.4 执行槽闸（无槽且任务 ≥3 → 停下补登记再开工，不默认自干）；execution-contract 须含 Execution Topology 节（方向恒为 行→contract）。配套 node-architect v1.13.4（PROTOCOL 规则 7/8 重写＋SKILL＋PROGRESS 模板）。
 - **v1.0.8**（2026-10-17）：**并行批与双节点**——①watchdog R6 调度器越权检测（接力会话主会话改源码/跑测试→即时弹窗，fixture 验证通过）②越界检查基线快照（开工快照 git status，双节点并行时对面合法改动不再误判）③同批号并行派发（≤3 支；分域判据：pytest∥vitest∥docs，同域内被 import 的文件＝共享接缝不可并行——文件集不相交≠依赖不相交，agent-methodology 规则 4 直译）④接缝串行棒（i18n/路由/白名单/barrel 单一收尾棒）⑤定向门禁窗口（棒跑期间只跑路径域，全仓回归归回验棒；信退出码不信报告）⑥越界=revert ⑦双节点并行条款（同仓≤2 接缝不相交节点，前提基线快照+定向门禁；>2 或接缝相交→串行；跨仓随意）⑧fixer 禁装卸依赖/改锁文件。外部依据：Claude Code 官方 worktree/agent-methodology 八规则/merge-orchestrator（详见 SESSIONS checkpoint）。
 - **v1.0.7**（2026-10-17）：**272-R1 首弹复盘修正**——2.5 分支与 §10 补「派发后白名单」（主会话仅四类合法动作：读报告记 facts／备下一棒简报／存档留痕／越界检查；**禁写源码、禁自跑测试门禁**，验证归棒内与复审棒——消解与 §10「派完不空等」的指令冲突，首弹实测主会话越权写码 41 Edit＋两轮 3 连败循环）；**拆棒规则**（同一文件全部改动＝1 棒，按缺陷类别切多棒＝每棒重复付新鲜重读侦察税 5–8 分钟，禁止）；复审棒报告须含逐项行号证据。首弹数据：8 节点以来首次真派 fixer（5/5 棒）、0 压缩（上次同任务 5 次）、交付实测真（i18n 16/16 独立复跑过）。

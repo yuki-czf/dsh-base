@@ -1,0 +1,218 @@
+============================================================
+【执行棒 D3 · 节点#33 批2｜一致性机检与试点批1检查证据】
+文件路径：changes\接力批并行提速与防幻觉加固\evidence\pilot-consistency.txt
+生成时间：2026-10-20 15:17:13 +08:00
+执行环境：E:\www\dsh-base
+执行角色：执行棒 D3（subagent: cpa/gemini-3.8-flash）
+============================================================
+
+一、检查项明细与原始执行输出
+
+1. 脚本全量一致性检查（sync-skills.ps1 -CheckOnly）
+- 执行命令：
+  powershell -NoProfile -ExecutionPolicy Bypass -File sync-skills.ps1 -CheckOnly
+- 进程退出码：0
+- 输出原文：
+==== sync-skills CHECK-ONLY ====
+pi-tempo master SKILL.md               version=1.0.11 parsed                        OK
+global ~/.agents/skills                SKILL version 1.0.11 == master               OK
+master template lab                    marker v1.0.11 == skill v1.0.11              OK
+master template reddit                 marker v1.0.11 == skill v1.0.11              OK
+deploy lab .pi/prompts                 marker v1.0.11 == skill v1.0.11              OK
+deploy reddit .pi/prompts              marker v1.0.11 == skill v1.0.11              OK
+subagent gemini-fixer                  global == master (hash)                      OK
+subagent gemini-scout                  global == master (hash)                      OK
+subagent independent-review            global == master (hash)                      OK
+node-arch dsh-base mirror              skill PROTOCOL == master (hash)              OK
+node-arch dsh-base .nodes              .nodes/PROTOCOL == master (norm)             OK
+node-arch reddit-trend-tc mirror       skill PROTOCOL == master (hash)              OK
+node-arch reddit-trend-tc .nodes       .nodes/PROTOCOL == master (norm)             OK
+interlock reddit-trend-tc              node-run 2.5 <-> PROTOCOL relay              OK
+node-arch pi-tempo-lab mirror          skill PROTOCOL == master (hash)              OK
+node-arch pi-tempo-lab .nodes          .nodes/PROTOCOL == master (norm)             OK
+interlock pi-tempo-lab                 node-run 2.5 <-> PROTOCOL relay              OK
+dsh-run master                         dsh-run master key sentence                  OK
+dsh-run deployed                       dsh-run deployed key sentence                OK
+dsh-run deployed                       dsh-run no node-run residue                  OK
+BATCH-PLAN template                    BATCH-PLAN batch primary key                 OK
+21 check(s), 0 failure(s)
+
+- 判定：PASS（退出码 0，末行 "21 check(s), 0 failure(s)"，全项 OK）
+
+
+2. DSH 实际加载位校验
+- 执行命令：
+  powershell -NoProfile -Command "
+  $h1 = (Get-FileHash .dsh\skills\dsh-run.md).Hash
+  $h2 = (Get-FileHash E:\.dsh\skills\dsh-run.md).Hash
+  $hashMatch = ($h1 -eq $h2)
+  $patternMatches = (Select-String -Path E:\.dsh\skills\dsh-run.md -Pattern '每批一次消息并发派发' -SimpleMatch).Count
+  $nodeRunExists = Test-Path E:\.dsh\skills\node-run.md
+  [PSCustomObject]@{
+      Hash1 = $h1
+      Hash2 = $h2
+      HashMatch = $hashMatch
+      PatternMatches = $patternMatches
+      NodeRunExists = $nodeRunExists
+  } | Format-List
+  "
+- 进程退出码：0
+- 输出原文：
+Hash1          : FC5E769EAA9B2EAB3EECD35E384E0B5747B0196CA5DE40345D95F3C1CD68E9D6
+Hash2          : FC5E769EAA9B2EAB3EECD35E384E0B5747B0196CA5DE40345D95F3C1CD68E9D6
+HashMatch      : True
+PatternMatches : 2
+NodeRunExists  : False
+
+- 判定：PASS（Hash 一致，关键短语命中 2 次 ≥ 1，node-run.md 不存在）
+
+
+3. 四模板位版本一致性
+- 检查路径列表：
+  - pi-tempo\templates\node-run.lab.md
+  - pi-tempo\templates\node-run.reddit-trend-tc.md
+  - E:\www\pi-tempo-lab\.pi\prompts\node-run.md
+  - E:\www\reddit\reddit-trend-tc\.pi\prompts\node-run.md
+- 执行命令：
+  powershell -NoProfile -Command "
+  @(
+      'pi-tempo\templates\node-run.lab.md',
+      'pi-tempo\templates\node-run.reddit-trend-tc.md',
+      'E:\www\pi-tempo-lab\.pi\prompts\node-run.md',
+      'E:\www\reddit\reddit-trend-tc\.pi\prompts\node-run.md'
+  ) | ForEach-Object {
+      $firstMatch = Select-String -Path $_ -Pattern 'pi-tempo v[0-9.]+' | Select-Object -First 1
+      [PSCustomObject]@{
+          File = $_
+          Match = $firstMatch.Line.Trim()
+      }
+  } | Format-Table -AutoSize
+  "
+- 进程退出码：0
+- 输出原文：
+File                                                  Match
+----                                                  -----
+pi-tempo\templates\node-run.lab.md                    <!-- pi-tempo v1.0.11 · 2026-10-20 · 与 skill 同版；改 skill 后…
+pi-tempo\templates\node-run.reddit-trend-tc.md        <!-- pi-tempo v1.0.11 · 2026-10-20 · 与 skill 同版；改 skill 后…
+E:\www\pi-tempo-lab\.pi\prompts\node-run.md           <!-- pi-tempo v1.0.11 · 2026-10-20 · 与 skill 同版；改 skill 后…
+E:\www\reddit\reddit-trend-tc\.pi\prompts\node-run.md <!-- pi-tempo v1.0.11 · 2026-10-20 · 与 skill 同版；改 skill 后…
+
+- 判定：PASS（4 处模板位首个 pi-tempo 版本标记均为 v1.0.11）
+
+
+4. node-architect 版本残留与真源位确认
+- 执行命令：
+  powershell -NoProfile -Command "
+  $files = Get-ChildItem -Path 'node-architect\skill' -Recurse -File
+  $res133 = $files | Select-String -Pattern '1\.13\.3'
+  $res134 = $files | Select-String -Pattern '1\.13\.4'
+  [PSCustomObject]@{
+      Count_1_13_3 = ($res133 | Measure-Object).Count
+      Count_1_13_4 = ($res134 | Measure-Object).Count
+  } | Format-List
+  Write-Output '--- 1.13.4 matches ---'
+  $res134 | ForEach-Object { \"$($_.Filename):$($_.LineNumber): $($_.Line.Trim())\" }
+  "
+- 进程退出码：0
+- 输出原文：
+Count_1_13_3 : 0
+Count_1_13_4 : 8
+
+--- 1.13.4 matches ---
+SKILL.md:3: version: 1.13.4
+SKILL.md:15: 2. **节点先行**：任何长于一次会话的工作，先在 `PROGRESS.md` 登记节点（名称 + 验收标准〔末尾带 `执行:`＋`收口:` **委派双槽**，无执行槽登记被拒（v1.13.4）〕+ owner 会话；登记走 `scripts/save.ps1 next-node` 原子取号——锁内全表扫描取 max+1，防并发撞号），并把下一步的设计要点写入 `CONTEXT.md` 的"下一步"，再写代码。地图先于道路。登记后、写代码前完成**开工侦察**（测试基建盘点 / 新依赖打样 / 门禁合并；结论用 `save checkpoint -Recon` 登记，verify 对缺失者 WARN——见 PROTOCOL「执行效率协议」）。
+SKILL.md:26: - **委派双槽（v1.13.4）**：登记的验收标准末尾必带执行槽＋收口槽——`执行:执行接力`（预估 >30min 或 ≥3 任务；plans 落七列接力表，执行会话照单派棒**禁主会话写源码**）或 `执行:—(自干理由)`（**没有默认值**；#273 实测「要不要派」永远判自干，只能必填槽强制）；`收口:独立复审`（有新代码默认必做，verify 软校验复审留痕兜底，豁免写理由）。决策表见 AGENTS.md。
+PROTOCOL.md:46: 7. **委派双槽（v1.13.4，登记必填——无执行槽＝非法，`save.ps1 next-node` 硬校验拒绝）**：验收标准列末尾写两个独立槽，缺执行槽不得登记：
+PROTOCOL.md:49: 8. **委派传导与闸门（v1.12.1；v1.13.4 增④）**：①**传导**——节点行带任何委派标记的，登记方（planner）须同步把委派点**展开为指令**写进 execution-contract 收口段（角色+复审清单+简报四要素），不许只留台账行；②**简报四要素**=目标一句话 / 涉改文件路径清单 / 边界禁区（不许动什么）/ 报告格式（APPROVE 或逐条问题清单）——flash 级子代理不能推断，缺一必跑偏；③**闸门**——`finish`/`verify` 软校验：节点行带 `收口:独立复审`（或旧式 `委派:收口独立复审`）且状态列为实施完成/已验收/已收口类时，SESSIONS 无该节点复审留痕 → WARN（同侦察标记模式；豁免须在 SESSIONS 写明理由）；④**拓扑传导（方向恒为 行→contract）**——执行槽为 `执行:执行接力` 的，planner 须把接力表同步进 execution-contract「Execution Topology（执行拓扑）」节（spec-superflow 五件套必含此节，缺节＝contract 不完整、禁止交接执行）；contract→行 反向照抄＝违规（#273 实例）。
+PROGRESS.md:14: 委派双槽（v1.13.4 必填；无执行槽＝next-node 拒绝登记）：写在验收标准列末尾——执行槽 `执行:执行接力`（>30min 或 ≥3 任务；plans 落七列接力表，「批」列同号≤3 支并发，禁主会话写码）/ `执行:—(自干理由)`；收口槽 `收口:独立复审`（有新代码默认必做，豁免写理由）/ `收口:登记差距分析` / `收口:—(豁免理由)`；执行端按两级阶梯解析（有子代理→派子代理；无→单会话自查清单），见 PROTOCOL「委派双槽」；历史行单槽 `委派:` 兼容读法＝执行槽自干
+save.ps1:388: # v1.13.4 dual-slot gate: non-empty -Accept must carry an execution slot.
+save.ps1:399: throw ("Accept text missing execution slot (dual-slot rule v1.13.4, PROTOCOL rule 7). Append '" + $hintRelay + "' (relay: 7-col table required in plans/) or '" + $hintSelf + "' (self-dry with reason).")
+
+- 判定：PASS（1.13.3 为 0 命中；1.13.4 在真源 8 处精准命中）
+
+
+5. 本轮文档改动核对
+- 检查文件与要点：
+  - pi-tempo\README.md 包含 v1.0.10 历史条目与 v1.0.11「批级循环」条目
+  - research\dsh-adaptation-drafts\install-stack.md 包含 E:\.dsh\skills\dsh-run.md 部署与校验步骤
+- 执行命令：
+  powershell -NoProfile -Command "
+  Write-Output '=== pi-tempo\README.md matches ==='
+  Select-String -Path 'pi-tempo\README.md' -Pattern 'v1\.0\.10|v1\.0\.11|批级循环' | ForEach-Object { \"$($_.LineNumber): $($_.Line.Trim())\" }
+
+  Write-Output '`n=== research\dsh-adaptation-drafts\install-stack.md matches ==='
+  Select-String -Path 'research\dsh-adaptation-drafts\install-stack.md' -Pattern 'dsh-run\.md' | ForEach-Object { \"$($_.LineNumber): $($_.Line.Trim())\" }
+  "
+- 进程退出码：0
+- 输出原文：
+=== pi-tempo\README.md matches ===
+55: - **v1.0.11**（2026-10-20）：**批级循环、模型分档与防幻觉锚定**——①**批级循环**：接力执行以批为循环单位，每批一次消息并发派发批内全部棒（≤3），整批收敛后统一 facts 追加与越界检查，批内单棒失败不阻塞他棒；②**模型分档**：主会话与收口复审使用 deepseek-v4.1-flash 调度/审计，执行棒使用 cpa/gemini-3.8-flash 扛实现；③**防幻觉锚定**：执行棒回报改动必附 `文件路径:行号` 锚定（无锚定或报告不完整即重派），收口复审须对锚点抽检 ≥3 处回查真实代码，沿用 25 万 token 会话熔断线。
+56: - **v1.0.10**（2026-10-18）：**双轨自检与返工棒**——#274 接力首弹复盘（147min／13 Task／fixer 8/8 全绿，但主会话 78 Edit＋218 Bash＋433 Read 与棒赛写同一批文件：R6 三弹、2 次棒重派、ctx 408.9k、返工尾 33min 仍双轨）。四条规则：①每棒收敛自检——`git status --porcelain` 对比授权集，授权集外改动＝调度器抢写，**停止而非重派**；②等待窗口禁 Read 源码本体；③复审发现→单支返工棒单一 owner 吃完全部发现，主会话禁参与返工；④可选只读模式（会话级只读且不阻 Task 时开工即切，物理剥夺 Edit/Write）。病根收窄定论：判断层（要不要派）已治愈（程序层 100% 照档案执行），唯一残存＝等待窗口白名单失守（R1→R2→274 三连），提示词禁令无效，改用程序化自检步骤＋停止反应。
+
+=== research\dsh-adaptation-drafts\install-stack.md matches ===
+28: - **三 skill（项目级，随仓库走）**：`.agents/skills/pi-tempo/`（含 subagents/ 三模板）、`.agents/skills/prometheus-spec/`、`.dsh/skills/dsh-run.md`
+72: > **模板口径说明**：DSH 侧执行模板已更名为 `dsh-run`（仓内母版为 `.dsh/skills/dsh-run.md`，实际加载位为 `E:\.dsh\skills\dsh-run.md`），消除了此前单指 `node-run` 的误导；PI-Desktop 侧仍使用 `node-run`（`.pi/prompts/node-run.md`），两端口径相互独立。
+78: Copy-Item .dsh\skills\dsh-run.md E:\.dsh\skills\dsh-run.md -Force
+87: ((Get-FileHash .dsh\skills\dsh-run.md).Hash) -eq ((Get-FileHash E:\.dsh\skills\dsh-run.md).Hash)
+90: [bool](Select-String -Path E:\.dsh\skills\dsh-run.md -Pattern "每批一次消息并发派发" -SimpleMatch)
+105: □ DSH NEXT 侧 dsh-run 实际加载位校验（E:\.dsh\skills\dsh-run.md 已落位、SHA256 一致、关键句命中、无 node-run 残留）
+114: - 用户级 skill 副本：删 `~/.agents/skills/{pi-tempo,prometheus-spec}` 与 `E:\.dsh\skills\dsh-run.md`（或 `~/.dsh/skills/dsh-run.md`，若做过 S6 / 手工落位）
+
+- 判定：PASS（文档均含指定条目）
+
+
+6. 越界与工作区变动检查
+- 执行命令：
+  git status --porcelain
+- 进程退出码：0
+- 输出原文：
+ M .nodes/PROGRESS.md
+ M .nodes/SESSIONS/main.md
+ M .nodes/relay/接力批并行提速与防幻觉加固/facts.md
+ M pi-tempo/README.md
+ M research/dsh-adaptation-drafts/install-stack.md
+?? .agents/skills/talk-human/
+?? ".nodes/plans/v1.0.11 发布文档补正与 dsh-run 落位说明.md"
+?? .nodes/relay/v1.0.11-doc-fix/
+?? .openchamber/
+?? pi-desktop-speed-patch/
+?? pi-gemini-tuning/
+?? pi-speed-meter/
+?? pi-throughput/
+
+- 变动分析：
+  - 预期文档变动：`pi-tempo/README.md`、`research/dsh-adaptation-drafts/install-stack.md`
+  - 节点/接力台账文件：`.nodes/PROGRESS.md`、`.nodes/relay/接力批并行提速与防幻觉加固/facts.md`、`.nodes/plans/v1.0.11 发布文档补正与 dsh-run 落位说明.md`、`.nodes/relay/v1.0.11-doc-fix/`
+  - 既有无关脏项（按规范列出并忽略）：`.nodes/SESSIONS/main.md`、`.agents/skills/talk-human/`、`.openchamber/`、`pi-desktop-speed-patch/`、`pi-gemini-tuning/`、`pi-speed-meter/`、`pi-throughput/`
+  - 结论：除上述允许范围外，无任何源码或模板级违规修改。
+- 判定：PASS
+
+
+二、结论汇总表
+
+| 序号 | 检查项目 | 关键指标要求 | 实际输出 | 结论 |
+|---|---|---|---|:---:|
+| 1 | sync-skills 全量一致性检查 | exit 0, 0 failure(s) | 21 check(s), 0 failure(s) | ✓ PASS |
+| 2 | DSH 实际加载位校验 | Hash 相等; 关键句≥1; node-run.md 不存在 | HashMatch=True; PatternMatches=2; NodeRunExists=False | ✓ PASS |
+| 3 | 四模板位版本一致性 | 首个 marker 均为 v1.0.11 | 4 处全部为 v1.0.11 | ✓ PASS |
+| 4 | node-architect 版本残留与真源位 | 1.13.3 命中 0; 1.13.4 命中 8 | 1.13.3 命中 0; 1.13.4 命中 8 | ✓ PASS |
+| 5 | 本轮文档改动条目核对 | README 补齐两版; install-stack 含部署校验 | 均包含指定段落与校验步骤 | ✓ PASS |
+| 6 | 工作区越界检查 | 无额外源码/模板级改动 | 仅允许文档+台账，既有脏项已列出 | ✓ PASS |
+
+最终结论：ALL PASS（全部 6 项机检均通过，严格符合 v1.0.11 改造与接力规范）
+============================================================
+
+七、复审响应（2026-10-20，调度器复核 + 返工）
+============================================================
+- 复审阻断项复核：
+  命令：Select-String -Path 'changes\接力批并行提速与防幻觉加固\evidence\pilot-consistency.txt' -Pattern 'PROTOCOL.md:126' -SimpleMatch
+  输出：0 命中（exit 1）
+  1.13.4 匹配块实测 8 行：SKILL.md:3/15/26、PROTOCOL.md:46/49、PROGRESS.md:14、save.ps1:388/399，与 Count_1_13_4=8 一致。
+  结论：阻断项为复审误报（编造行号），本证据未含不存在的行号；误报已记入 facts，不据此伪造修改。
+- 计数口径统一：本文件为 6 类机检（8 条断言）；facts.md 同步为「6 类（8 条）」。
+- 本轮返工已修（真问题）：
+  1) pi-tempo/README.md v1.0.11 条目②「模型分档」归属改为「DSH NEXT 侧 dsh-run 模板」，并注明 pi-tempo SKILL 不含模型字段。
+  2) install-stack.md L73 分工表述补 node-architect install.ps1 与「3.4 断言语义＝只查关键句、不校验哈希」。
+  3) install-stack.md L114 回滚路径改为 E:\.dsh\skills 与 ~/.agents/skills（~/.dsh/skills 仅历史路径）。
+- 附带修正（模板层，见 v1.0.12 提交）：批内并行原语改为 workflow.parallel；复审阻断项须附原文摘录并由调度器 grep 复核；sync-skills 增 save.ps1 BOM+解析断言。
+
