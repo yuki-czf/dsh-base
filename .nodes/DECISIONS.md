@@ -109,3 +109,12 @@
 - **推翻的官方建议**：DSH 报错弹窗自带「把记录里的 store 写进 `pnpm-workspace.yaml`：`storeDir: <第一个路径>`」——**跨大版本时无效**（实测 pnpm 11 解析成 `…\v10\v11`，仍报同错）；该修法只适用同大版本换盘（记录 v11 时写 v11 路径即通过）。另两条路也不通：`pnpm install --store-dir <path>` 只对单次命令生效、不重写记录；`pnpm install` 在 store 变更时先要求确认删除 node_modules，非 TTY 下 `ERR_PNPM_ABORTED_REMOVE_MODULES_DIR_NO_TTY`（须 `CI=true`/`confirmModulesPurge=false`，且要退出 DSH 释放占用）——这正是市场无法自愈的机制原因。实测全文见 archive/DSH profile store 失配修复.md。
 - **纪律（本机）**：**禁止用 PATH 上的 pnpm（`C:\tools\nodejs`，10.32.1）在 `E:\.dsh\profiles\desktop` 里执行 install**——一次就把记录写回 v10、市场即刻全拒；该目录手动操作一律用 DSH 自带 11.8.0（`resources\app.asar.unpacked\node_modules\pnpm\bin\pnpm.mjs`）。一句话判据：**记录里的 store 必须与操刀 pnpm 的大版本一致**。
 - **遗留**：`E:\.pnpm-store\v10`（918MB）仍被 node_modules 硬链接引用，直接删不省空间；退役需退出 DSH 后 `$env:CI='true'; <DSH NEXT.exe> --expose-internals <自带 pnpm.mjs> install` 全量重链到 v11，再清 v10（可选，未执行）。
+
+## [2026-10-20] #32/#33 接力批加固与试点：并行原语、BOM、复审锚点
+
+- **背景**：三模板批级循环＋sync 断言（v1.0.11）落地后，用真实小节点 #33 做 n=1 试点；P0 探测发现模板里的「并行」实为串行。
+- **决定（并行原语）**：批内并发一律 `workflow.parallel`（可带 provider/model）；`subagent_manager_run` 是同步 persona、一条消息内串行（实测两棒差 102.5s），只配单棒/复审/返工；官方异步 `subagent` 真并行但无 provider/model，仅不需分档时用。v1.0.12 已回写 dsh-run／pi-tempo §10／BATCH-PLAN。
+- **决定（防幻觉）**：复审阻断项必须附 `文件:行: 原文`，调度器先 grep 复核；原文不存在＝误报，记 facts 不派返工（#33 实测复审编造 `PROTOCOL.md:126`）。
+- **修复（BOM）**：编辑 `.ps1` 会丢 UTF-8 BOM，PS5.1 解析 CJK 即崩；`sync-skills.ps1` 增 4 副本「BOM+ParseFile 零错误」断言（25 checks）——哈希一致不代表可执行。
+- **试点结果**：批 1 双棒真并行 22.6min vs 串行外推 40m57s（省 44.8%）；五判据全过；模型分档不变。
+- **遗留**：workflow 子会话不落 projcache（每棒 TTFT/pressure 不可机读）；host 取消 workflow 的 `agent/disposed TypeError` 上报；pi-tempo DSH 方言副本需经装配链升版。

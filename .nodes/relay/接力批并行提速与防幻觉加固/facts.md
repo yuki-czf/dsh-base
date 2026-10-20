@@ -24,3 +24,10 @@
 - 三跑：全量 sync exit 0（21 checks, 0 fail）→ -CheckOnly exit 0 → 篡改部署位关键句 -CheckOnly exit 1（指名路径）→ try/finally 恢复 → exit 0；母版与部署位 SHA256 一致。
 - 不确定项②闭环：全量 sync 后全局 pi-tempo SKILL.md 已带 `version: 1.0.11`，-CheckOnly 的 version 项转绿。
 - 副作用：sync 同时更新了仓内 `.agents/skills/node-architect/` 5 文件（预期分发），未清理未提交。
+
+## 批 2 · T7（全量分发＋提交）
+
+- 全量 `sync-skills.ps1` exit 0（21 checks / 0 fail）；`-CheckOnly` exit 0；四模板位均 v1.0.11；`E:\.dsh\skills\dsh-run.md` 与母版哈希一致、无 node-run 残留。
+- 提交 `00507c6 feat(relay): 批级循环与防幻觉加固 v1.0.11`：32 files / +920 −69，白名单暂存，无关脏项零进提交；未 push。
+- 提交后工作区仅剩：`.nodes/SESSIONS/main.md`（既有）、evidence/task7-sync.txt（提交后补记状态段，随收口一并处理）、`talk-human`/`.openchamber`/`pi-*` 既有未跟踪目录。
+- 节点行状态更新为「进行中」；**批 3 待用户指定试点节点后继续**（用户要求试点前停下）。
