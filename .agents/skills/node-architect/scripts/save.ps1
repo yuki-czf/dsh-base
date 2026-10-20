@@ -1,4 +1,4 @@
-﻿#Requires -Version 5.1
+#Requires -Version 5.1
 <#
 .SYNOPSIS
   .nodes 存档流程的机械动作：CONTEXT 写锁管理 + 存档完整性校验 + 一键存档/原子收口。
@@ -385,7 +385,7 @@ if ($Action -eq 'next-node') {
     $newN = $maxN + 1
     $statusTxt = -join ([char]0x5F85, [char]0x5F00, [char]0x59CB)
     $acceptTxt = if ($Accept) { $Accept } else { -join ([char]0x5F85, [char]0x8865, [char]0x5145) }
-    # v1.13.3 dual-slot gate: non-empty -Accept must carry an execution slot.
+    # v1.13.4 dual-slot gate: non-empty -Accept must carry an execution slot.
     # CJK via code points (BOM-less ANSI-parse safety):
     #   0x6267 0x884C = exec-slot prefix / 0x63A5 0x529B = relay / 0x81EA 0x5E72 0x7406 0x7531 = self-dry reason
     #   0x59D4 0x6D3E = legacy delegation prefix (legacy relay spelling still accepted)
@@ -396,7 +396,7 @@ if ($Action -eq 'next-node') {
       if (-not ($Accept.Contains($zxAscii) -or $Accept.Contains($zxFull) -or $Accept.Contains($legacyRelay))) {
         $hintRelay = -join ([char]0x6267, [char]0x884C, [char]0x3A, [char]0x6267, [char]0x884C, [char]0x63A5, [char]0x529B)
         $hintSelf = -join ([char]0x6267, [char]0x884C, [char]0x3A, [char]0x2014, [char]0x28, [char]0x81EA, [char]0x5E72, [char]0x7406, [char]0x7531, [char]0x29)
-        throw ("Accept text missing execution slot (dual-slot rule v1.13.3, PROTOCOL rule 7). Append '" + $hintRelay + "' (relay: 7-col table required in plans/) or '" + $hintSelf + "' (self-dry with reason).")
+        throw ("Accept text missing execution slot (dual-slot rule v1.13.4, PROTOCOL rule 7). Append '" + $hintRelay + "' (relay: 7-col table required in plans/) or '" + $hintSelf + "' (self-dry with reason).")
       }
     }
     $row = "| $newN | $Node | $acceptTxt | $statusTxt | $Session | $(Get-Date -Format 'yyyy-MM-dd') |"

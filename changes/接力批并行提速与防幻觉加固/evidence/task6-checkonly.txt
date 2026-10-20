@@ -1,0 +1,197 @@
+================================================================================
+Task 6 Evidence: sync-skills.ps1 DSH drop spot assertions & -CheckOnly 3-run
+Date: 2026-10-20
+Workspace: E:\www\dsh-base
+================================================================================
+
+[Step a] Full sync-skills.ps1 deploy + verify run (green baseline)
+Command:
+powershell -NoProfile -ExecutionPolicy Bypass -File E:\www\dsh-base\sync-skills.ps1
+
+Exit Code: 0
+
+Output (tail 15 lines):
+subagent gemini-scout                  global == master (hash)                      OK
+subagent independent-review            global == master (hash)                      OK
+node-arch dsh-base mirror              skill PROTOCOL == master (hash)              OK
+node-arch dsh-base .nodes              .nodes/PROTOCOL == master (norm)             OK
+node-arch reddit-trend-tc mirror       skill PROTOCOL == master (hash)              OK
+node-arch reddit-trend-tc .nodes       .nodes/PROTOCOL == master (norm)             OK
+interlock reddit-trend-tc              node-run 2.5 <-> PROTOCOL relay              OK
+node-arch pi-tempo-lab mirror          skill PROTOCOL == master (hash)              OK
+node-arch pi-tempo-lab .nodes          .nodes/PROTOCOL == master (norm)             OK
+interlock pi-tempo-lab                 node-run 2.5 <-> PROTOCOL relay              OK
+dsh-run master                         dsh-run master key sentence                  OK
+dsh-run deployed                       dsh-run deployed key sentence                OK
+dsh-run deployed                       dsh-run no node-run residue                  OK
+BATCH-PLAN template                    BATCH-PLAN batch primary key                 OK
+21 check(s), 0 failure(s)
+
+--------------------------------------------------------------------------------
+
+[Step b] sync-skills.ps1 -CheckOnly run (green baseline verification)
+Command:
+powershell -NoProfile -ExecutionPolicy Bypass -File E:\www\dsh-base\sync-skills.ps1 -CheckOnly
+
+Exit Code: 0
+
+Output (tail 15 lines):
+subagent gemini-scout                  global == master (hash)                      OK
+subagent independent-review            global == master (hash)                      OK
+node-arch dsh-base mirror              skill PROTOCOL == master (hash)              OK
+node-arch dsh-base .nodes              .nodes/PROTOCOL == master (norm)             OK
+node-arch reddit-trend-tc mirror       skill PROTOCOL == master (hash)              OK
+node-arch reddit-trend-tc .nodes       .nodes/PROTOCOL == master (norm)             OK
+interlock reddit-trend-tc              node-run 2.5 <-> PROTOCOL relay              OK
+node-arch pi-tempo-lab mirror          skill PROTOCOL == master (hash)              OK
+node-arch pi-tempo-lab .nodes          .nodes/PROTOCOL == master (norm)             OK
+interlock pi-tempo-lab                 node-run 2.5 <-> PROTOCOL relay              OK
+dsh-run master                         dsh-run master key sentence                  OK
+dsh-run deployed                       dsh-run deployed key sentence                OK
+dsh-run deployed                       dsh-run no node-run residue                  OK
+BATCH-PLAN template                    BATCH-PLAN batch primary key                 OK
+21 check(s), 0 failure(s)
+
+--------------------------------------------------------------------------------
+
+[Step c] Reverse verification (Tamper deployed dsh-run.md -> Red -> Restore -> Green)
+
+1. Tamper execution:
+Tamper method:
+Backup E:\.dsh\skills\dsh-run.md to .bak, then replace $nBatch ("每批一次消息并发派发") with empty string.
+
+Command:
+powershell -NoProfile -ExecutionPolicy Bypass -File E:\www\dsh-base\sync-skills.ps1 -CheckOnly
+
+Exit Code: 1
+
+Output (full output showing path & assertion label FAIL):
+KEY SENTENCE MISSING: E:\.dsh\skills\dsh-run.md
+
+==== sync-skills CHECK-ONLY ====
+pi-tempo master SKILL.md               version=1.0.11 parsed                        OK
+global ~/.agents/skills                SKILL version 1.0.11 == master               OK
+master template lab                    marker v1.0.11 == skill v1.0.11              OK
+master template reddit                 marker v1.0.11 == skill v1.0.11              OK
+deploy lab .pi/prompts                 marker v1.0.11 == skill v1.0.11              OK
+deploy reddit .pi/prompts              marker v1.0.11 == skill v1.0.11              OK
+subagent gemini-fixer                  global == master (hash)                      OK
+subagent gemini-scout                  global == master (hash)                      OK
+subagent independent-review            global == master (hash)                      OK
+node-arch dsh-base mirror              skill PROTOCOL == master (hash)              OK
+node-arch dsh-base .nodes              .nodes/PROTOCOL == master (norm)             OK
+node-arch reddit-trend-tc mirror       skill PROTOCOL == master (hash)              OK
+node-arch reddit-trend-tc .nodes       .nodes/PROTOCOL == master (norm)             OK
+interlock reddit-trend-tc              node-run 2.5 <-> PROTOCOL relay              OK
+node-arch pi-tempo-lab mirror          skill PROTOCOL == master (hash)              OK
+node-arch pi-tempo-lab .nodes          .nodes/PROTOCOL == master (norm)             OK
+interlock pi-tempo-lab                 node-run 2.5 <-> PROTOCOL relay              OK
+dsh-run master                         dsh-run master key sentence                  OK
+dsh-run deployed                       dsh-run deployed key sentence                FAIL
+dsh-run deployed                       dsh-run no node-run residue                  OK
+BATCH-PLAN template                    BATCH-PLAN batch primary key                 OK
+21 check(s), 1 failure(s)
+
+2. Restore execution (in try/finally block):
+Restore method:
+Copy backup .bak back to E:\.dsh\skills\dsh-run.md and delete .bak.
+
+Command:
+powershell -NoProfile -ExecutionPolicy Bypass -File E:\www\dsh-base\sync-skills.ps1 -CheckOnly
+
+Exit Code: 0
+
+Output (tail 15 lines):
+subagent gemini-scout                  global == master (hash)                      OK
+subagent independent-review            global == master (hash)                      OK
+node-arch dsh-base mirror              skill PROTOCOL == master (hash)              OK
+node-arch dsh-base .nodes              .nodes/PROTOCOL == master (norm)             OK
+node-arch reddit-trend-tc mirror       skill PROTOCOL == master (hash)              OK
+node-arch reddit-trend-tc .nodes       .nodes/PROTOCOL == master (norm)             OK
+interlock reddit-trend-tc              node-run 2.5 <-> PROTOCOL relay              OK
+node-arch pi-tempo-lab mirror          skill PROTOCOL == master (hash)              OK
+node-arch pi-tempo-lab .nodes          .nodes/PROTOCOL == master (norm)             OK
+interlock pi-tempo-lab                 node-run 2.5 <-> PROTOCOL relay              OK
+dsh-run master                         dsh-run master key sentence                  OK
+dsh-run deployed                       dsh-run deployed key sentence                OK
+dsh-run deployed                       dsh-run no node-run residue                  OK
+BATCH-PLAN template                    BATCH-PLAN batch primary key                 OK
+21 check(s), 0 failure(s)
+
+--------------------------------------------------------------------------------
+
+[Step d] Hash verification after restore (Master vs Deployed)
+Command:
+$mHash = (Get-FileHash -Path 'E:\www\dsh-base\.dsh\skills\dsh-run.md' -Algorithm SHA256).Hash
+$dHash = (Get-FileHash -Path 'E:\.dsh\skills\dsh-run.md' -Algorithm SHA256).Hash
+Write-Host "Master Hash  : $mHash"
+Write-Host "Deployed Hash: $dHash"
+Write-Host "Equal        : $($mHash -eq $dHash)"
+
+Output:
+Master Hash  : FC5E769EAA9B2EAB3EECD35E384E0B5747B0196CA5DE40345D95F3C1CD68E9D6
+Deployed Hash: FC5E769EAA9B2EAB3EECD35E384E0B5747B0196CA5DE40345D95F3C1CD68E9D6
+Equal        : True
+
+--------------------------------------------------------------------------------
+
+[Step e] Uncertainty Item (2) Conclusion: Global pi-tempo SKILL.md version marker
+Investigation:
+1. Master file: E:\www\dsh-base\pi-tempo\skill\SKILL.md has "version: 1.0.11" in frontmatter.
+2. Full sync (`powershell sync-skills.ps1`) executed line 64:
+   `Copy-Item (Join-Path $ptSkill '*') $gSkill -Recurse -Force`
+   This successfully copied the updated master SKILL.md to C:\Users\tc\.agents\skills\pi-tempo\SKILL.md.
+3. Verification in -CheckOnly:
+   Line 81-82:
+   `$gVer = ((Select-String -Path (Join-Path $gSkill 'SKILL.md') -Pattern '^version:\s*([\d\.]+)').Matches[0].Groups[1].Value)`
+   `Add-Result 'global ~/.agents/skills' "SKILL version $gVer == master" ($gVer -eq $mVer)`
+   Result:
+   `global ~/.agents/skills                SKILL version 1.0.11 == master               OK`
+4. Conclusion:
+   After full sync-skills.ps1 deployment, global pi-tempo SKILL.md now contains `version: 1.0.11`.
+   The -CheckOnly version check passes cleanly (exit 0) and no longer errors.
+
+--------------------------------------------------------------------------------
+
+[Step f] Git status after sync (dsh-base)
+Command:
+git status --porcelain
+
+Output:
+ M .agents/skills/node-architect/SKILL.md
+ M .agents/skills/node-architect/references/PROTOCOL.md
+ M .agents/skills/node-architect/references/templates/BATCH-PLAN.md
+ M .agents/skills/node-architect/references/templates/PROGRESS.md
+ M .agents/skills/node-architect/scripts/save.ps1
+RM .dsh/skills/node-run.md -> .dsh/skills/dsh-run.md
+ M .nodes/PROGRESS.md
+ M .nodes/PROTOCOL.md
+ M .nodes/SESSIONS/main.md
+ M AGENTS.md
+ M node-architect/skill/SKILL.md
+ M node-architect/skill/references/PROTOCOL.md
+ M node-architect/skill/references/templates/BATCH-PLAN.md
+ M node-architect/skill/references/templates/PROGRESS.md
+ M node-architect/skill/scripts/save.ps1
+ M pi-tempo/README.md
+ M pi-tempo/skill/SKILL.md
+ M pi-tempo/templates/node-run.lab.md
+ M pi-tempo/templates/node-run.reddit-trend-tc.md
+ M research/dsh-adaptation-drafts/discrepancies.md
+ M research/dsh-adaptation-drafts/install-stack.md
+ M research/dsh-desktop-adaptation.md
+ M sync-skills.ps1
+?? .agents/skills/talk-human/
+?? .nodes/plans/接力批并行提速与防幻觉加固.md
+?? .nodes/relay/接力批并行提速与防幻觉加固/
+?? .openchamber/
+?? pi-desktop-speed-patch/
+?? pi-gemini-tuning/
+?? pi-speed-meter/
+?? pi-throughput/
+
+Note on new paths:
+`sync-skills.ps1` deployed updated node-architect to `.agents/skills/node-architect/` inside `dsh-base` (5 files modified: SKILL.md, PROTOCOL.md, BATCH-PLAN.md, PROGRESS.md, save.ps1).
+No `.pi` files were created in dsh-base (detected DSH environment).
+All paths left untouched per instructions (no clean, no commit).
+================================================================================

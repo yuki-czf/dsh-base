@@ -12,7 +12,7 @@
 ## 1. 背景与用户工作流（迁移动机）
 
 - 现状：prometheus-spec 跑在另一台设备的 openchamber（opencode 系）上；执行在 PI-Desktop，`node-run <节点名>` 驱动
-- 完整流程：prometheus-spec 出计划五件套（`changes/{需求名}/`：proposal/specs/design/tasks/execution-contract）→ node-architect（v1.13.3，委派双槽）登记节点 + `plans/<名>.md` 七列接力表 → PI-Desktop `node-run` 逐棒派 `Task(gemini-fixer)`（Gemini 3.8 Flash）→ `.nodes/relay/<名>/facts.md` 记账 → 越界检查（`git status --porcelain` 对基线快照）→ independent-review 异构复审 → node-save 存档
+- 完整流程：prometheus-spec 出计划五件套（`changes/{需求名}/`：proposal/specs/design/tasks/execution-contract）→ node-architect（v1.13.4，委派双槽）登记节点 + `plans/<名>.md` 七列接力表 → PI-Desktop `node-run` 逐棒派 `Task(gemini-fixer)`（Gemini 3.8 Flash）→ `.nodes/relay/<名>/facts.md` 记账 → 越界检查（`git status --porcelain` 对基线快照）→ independent-review 异构复审 → node-save 存档
 - 动机：Gemini Flash 快但弱，上下文变长即幻觉/不守规则；对策 = 拆小节点 + 每棒新鲜上下文 + 并行派发 + 锚定（ANCHOR）
 - 迁移增益：调度器从 Gemini Flash 换成 DSH 主会话强模型（调度质量不再受衰减影响）
 - 用户明确划界：**模型渠道接入（含 Gemini 路由配置）用户自己处理**，本蓝图只消费路由名
@@ -22,7 +22,7 @@
 | 项 | 现状 | 影响 |
 |---|---|---|
 | 工作区 | `G:\www\dsh-base`（git 克隆，本地检出停在 **v1.10.1 时代**，约 2026-10-11） | 本地与云端 main 落后约 3 周 |
-| 云端母版版本 | node-architect **v1.13.3**、pi-tempo **v1.0.9**、prometheus-spec **v1.1**（GitHub yuki-czf/dsh-base main） | 语义基准以云端为准 |
+| 云端母版版本 | node-architect **v1.13.4**、pi-tempo **v1.0.9**、prometheus-spec **v1.1**（GitHub yuki-czf/dsh-base main） | 语义基准以云端为准 |
 | `pi-tempo/`、`prometheus-spec/` 目录 | **本地不存在**（云端 10-18 才推） | 底稿从 GitHub raw 拉（见下表） |
 | `node-architect/` 母版 | 本地存在（~v1.10.1） | 可用，但委派双槽是 v1.13.x 语义，见云端 SKILL.md |
 | 本地 `git fetch` | **失败**：`.git/FETCH_HEAD` ACL 异常（一个非标准 SID 只有 W/D/DC 无 R） | 本批**不需要** git；要修再修（icacls 或 diagnose-windows-sandbox-acl skill） |
@@ -99,7 +99,7 @@ https://raw.githubusercontent.com/yuki-czf/dsh-base/main/node-architect/skill/SK
 |---|---|---|---|
 | A1 | pi-tempo **DSH 方言版** | `.agents/skills/pi-tempo/SKILL.md` | 源=云端 v1.0.9 改写：§1 Edit-tag 节整节替换（DSH edit 是字面量替换、无 tag 失效；批量=同消息多 edit / ops_replace / write 整文件）；§2→`timeoutMs`；§3→`[exit code: N]`；§7 参数表换 DSH 工具名；§8 删"机械步降档 low"（DSH 无按调用档位）；**§5/§6/§8.5（锚定）/§9/§10 普适内核原样保留**；§10 接力调度映射：Task/TaskWait→subagent 并发+完成通知 / workflow parallel·pipeline |
 | A2 | 执行棒简报模板 DSH 版 | `.agents/skills/pi-tempo/subagents/{gemini-fixer,gemini-scout,independent-review}.md` | 源=云端同名文件；六段简报结构（GOAL/验收/文件集/已验证事实/验证/终止）原样；工具引用换 DSH（edit→edit/write、bash→pwsh、测试命令不变）；回报要求各段 ≤300 字保留 |
-| A3 | **node-run DSH 版** | `.dsh/skills/node-run.md`（平铺、user-invocable 默认即开） | 语义照 `node-run.lab.md`：读档（CONTEXT+PROGRESS+接力表一批并发读）→ `git status --porcelain > .nodes/relay/<名>/baseline.txt` 基线快照 → 逐棒（读模板+六段简报 → `subagent(..., provider='__GEMINI_ROUTE__', model='gemini-3.8-flash')` → 报告事实追加 facts.md → 越界检查=快照后新增且不在本棒授权集的行）→ 复审棒（**换 provider** 异构）→ 存档收口；含 ANCHOR 行纪律与会话熔断线 |
+| A3 | **dsh-run** | `.dsh/skills/dsh-run.md`（平铺、user-invocable 默认即开） | 语义照 `node-run.lab.md`：读档（CONTEXT+PROGRESS+接力表一批并发读）→ `git status --porcelain > .nodes/relay/<名>/baseline.txt` 基线快照 → 逐棒（读模板+六段简报 → `subagent(..., provider='__GEMINI_ROUTE__', model='gemini-3.8-flash')` → 报告事实追加 facts.md → 越界检查=快照后新增且不在本棒授权集的行）→ 复审棒（**换 provider** 异构）→ 存档收口；含 ANCHOR 行纪律与会话熔断线 |
 | A4 | prometheus-spec **skill 全文 DSH 版** | `.agents/skills/prometheus-spec/SKILL.md` | 源=云端 prometheus-spec.md：剥 opencode frontmatter（permissions YAML/model/mode）→ 换 DSH skill frontmatter；工具表重映射：`task(explore)`→subagent 只读简报派发、`task(librarian)`→`subagent(agent_preset:'librarian')`、`task(general)`→裸 subagent、bash→pwsh、analyze_image MCP→视配置（无则注明降级）；shuo-ren-hua 引用→talk-human skill 名；五件套纪律/Clearance Checklist/自审三分类/高精度审查循环/交接铁律**原样保留** |
 | A5 | persona 短前缀文本 | `research/dsh-adaptation-drafts/persona-prometheus-spec.md` | ≤30 行：规划者身份 + "永远理解为创建工作计划" + 权限闸门口径（changes/、.nodes/ 外无写权，被拒不绕过）+ **强制第一步加载 prometheus-spec skill** |
 | A6 | librarian persona 文本 | `research/dsh-adaptation-drafts/persona-librarian.md` | 源=云端 librarian.md 剥 opencode frontmatter；证据必须带 permalink、四分类（A/B/C/D）、日期自检等正文原样 |
@@ -134,7 +134,7 @@ https://raw.githubusercontent.com/yuki-czf/dsh-base/main/node-architect/skill/SK
 
 ```
 □ A1-A6 全部落位且 frontmatter 合法（name kebab + description）
-□ 本项目会话技能目录出现 pi-tempo、prometheus-spec；'/' 命令面出现 node-run（GUI 实测）
+□ 本项目会话技能目录出现 pi-tempo、prometheus-spec；'/' 命令面出现 dsh-run（GUI 实测）
 □ A1 保留 §8.5 锚定与 §10 依赖四型等普适内核（对照云端原文抽查）
 □ B3 两 preset 行激活、无诊断；新会话选择器可见
 □ 选 prometheus-spec 预设的新会话：首步主动加载 skill，对"实现X"类请求回应"创建工作计划"而非动手写码

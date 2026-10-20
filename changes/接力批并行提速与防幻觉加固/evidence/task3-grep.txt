@@ -1,0 +1,45 @@
+﻿=== Command: grep -n "批列=主键" node-architect\skill\references\templates\BATCH-PLAN.md ===
+28:> **执行者列与接力模式**：节点行带 `委派:执行接力` 时，各棒执行者**不得**填「主会话」——主会话只当调度器（读棒简报→派发→收敛→事实追加→下一棒；**禁写源码、禁自跑测试/门禁**，验证归棒内与复审棒），写码全部由执行者列的角色承担；无该标记的节点执行者列全填「主会话」，行为与旧六列制完全一致。**拆棒规则**：同一文件的全部改动＝1 棒（预估 >2 小时才按不重叠区段拆）——按缺陷类别把同一文件切成多棒＝每棒重复付「新鲜上下文重读该文件」的侦察成本（实测 1500 行文件每棒 5–8 分钟），禁止；接力甜区＝多文件多域任务。**并行批（v1.0.8）**：批列=主键：同号=同批并发（单批 ≤3 支一次消息派发）；无依赖（前置批为 -）且运行时域不相交的棒**必须同号**；存量表无批列 → 视为每棒一批（串行），照常执行不迁移。并行批按**运行时域**切分（pytest ∥ vitest ∥ docs），同域内**被其他棒 import 的文件＝共享接缝**、接缝不相交才可并行（文件集不相交 ≠ 依赖不相交）；i18n 键/路由注册/门禁白名单/barrel 等共享面归**串行收尾棒**；并行窗口门禁只跑路径域，全仓回归由回验棒统一跑一次；越界＝revert 不 merge。
+[exit code: 0]
+
+=== Command: grep -n "必须同号" node-architect\skill\references\templates\BATCH-PLAN.md ===
+28:> **执行者列与接力模式**：节点行带 `委派:执行接力` 时，各棒执行者**不得**填「主会话」——主会话只当调度器（读棒简报→派发→收敛→事实追加→下一棒；**禁写源码、禁自跑测试/门禁**，验证归棒内与复审棒），写码全部由执行者列的角色承担；无该标记的节点执行者列全填「主会话」，行为与旧六列制完全一致。**拆棒规则**：同一文件的全部改动＝1 棒（预估 >2 小时才按不重叠区段拆）——按缺陷类别把同一文件切成多棒＝每棒重复付「新鲜上下文重读该文件」的侦察成本（实测 1500 行文件每棒 5–8 分钟），禁止；接力甜区＝多文件多域任务。**并行批（v1.0.8）**：批列=主键：同号=同批并发（单批 ≤3 支一次消息派发）；无依赖（前置批为 -）且运行时域不相交的棒**必须同号**；存量表无批列 → 视为每棒一批（串行），照常执行不迁移。并行批按**运行时域**切分（pytest ∥ vitest ∥ docs），同域内**被其他棒 import 的文件＝共享接缝**、接缝不相交才可并行（文件集不相交 ≠ 依赖不相交）；i18n 键/路由注册/门禁白名单/barrel 等共享面归**串行收尾棒**；并行窗口门禁只跑路径域，全仓回归由回验棒统一跑一次；越界＝revert 不 merge。
+[exit code: 0]
+
+=== Command: grep -n "每棒一批" node-architect\skill\references\templates\BATCH-PLAN.md ===
+28:> **执行者列与接力模式**：节点行带 `委派:执行接力` 时，各棒执行者**不得**填「主会话」——主会话只当调度器（读棒简报→派发→收敛→事实追加→下一棒；**禁写源码、禁自跑测试/门禁**，验证归棒内与复审棒），写码全部由执行者列的角色承担；无该标记的节点执行者列全填「主会话」，行为与旧六列制完全一致。**拆棒规则**：同一文件的全部改动＝1 棒（预估 >2 小时才按不重叠区段拆）——按缺陷类别把同一文件切成多棒＝每棒重复付「新鲜上下文重读该文件」的侦察成本（实测 1500 行文件每棒 5–8 分钟），禁止；接力甜区＝多文件多域任务。**并行批（v1.0.8）**：批列=主键：同号=同批并发（单批 ≤3 支一次消息派发）；无依赖（前置批为 -）且运行时域不相交的棒**必须同号**；存量表无批列 → 视为每棒一批（串行），照常执行不迁移。并行批按**运行时域**切分（pytest ∥ vitest ∥ docs），同域内**被其他棒 import 的文件＝共享接缝**、接缝不相交才可并行（文件集不相交 ≠ 依赖不相交）；i18n 键/路由注册/门禁白名单/barrel 等共享面归**串行收尾棒**；并行窗口门禁只跑路径域，全仓回归由回验棒统一跑一次；越界＝revert 不 merge。
+[exit code: 0]
+
+=== Command: grep -n "^| 1 " node-architect\skill\references\templates\BATCH-PLAN.md ===
+22:| 1 | {示例甲：无依赖独立域A} | {本批要读/改哪些文件、函数} | {缺省=主会话；接力节点填角色（scout/fixer/review 等）} | {怎样算本批完成，逐条可勾验} | {预计读入上下文的输入材料大小，K} | - |
+23:| 1 | {示例乙：无依赖独立域B} | {与甲运行时域不相交的文件} | {角色（如 fixer-b）} | {同上} | {…} | - |
+[exit code: 0]
+
+=== Command: grep -rn "1\.13\.3" node-architect\skill\ ===
+[exit code: 1]
+
+=== Command: grep -rn "1\.13\.4" node-architect\skill\ ===
+node-architect\skill\/references/PROTOCOL.md:46:7. **委派双槽（v1.13.4，登记必填——无执行槽＝非法，`save.ps1 next-node` 硬校验拒绝）**：验收标准列末尾写两个独立槽，缺执行槽不得登记：
+node-architect\skill\/references/PROTOCOL.md:49:8. **委派传导与闸门（v1.12.1；v1.13.4 增④）**：①**传导**——节点行带任何委派标记的，登记方（planner）须同步把委派点**展开为指令**写进 execution-contract 收口段（角色+复审清单+简报四要素），不许只留台账行；②**简报四要素**=目标一句话 / 涉改文件路径清单 / 边界禁区（不许动什么）/ 报告格式（APPROVE 或逐条问题清单）——flash 级子代理不能推断，缺一必跑偏；③**闸门**——`finish`/`verify` 软校验：节点行带 `收口:独立复审`（或旧式 `委派:收口独立复审`）且状态列为实施完成/已验收/已收口类时，SESSIONS 无该节点复审留痕 → WARN（同侦察标记模式；豁免须在 SESSIONS 写明理由）；④**拓扑传导（方向恒为 行→contract）**——执行槽为 `执行:执行接力` 的，planner 须把接力表同步进 execution-contract「Execution Topology（执行拓扑）」节（spec-superflow 五件套必含此节，缺节＝contract 不完整、禁止交接执行）；contract→行 反向照抄＝违规（#273 实例）。
+node-architect\skill\/references/templates/PROGRESS.md:14:委派双槽（v1.13.4 必填；无执行槽＝next-node 拒绝登记）：写在验收标准列末尾——执行槽 `执行:执行接力`（>30min 或 ≥3 任务；plans 落七列接力表，「批」列同号≤3 支并发，禁主会话写码）/ `执行:—(自干理由)`；收口槽 `收口:独立复审`（有新代码默认必做，豁免写理由）/ `收口:登记差距分析` / `收口:—(豁免理由)`；执行端按两级阶梯解析（有子代理→派子代理；无→单会话自查清单），见 PROTOCOL「委派双槽」；历史行单槽 `委派:` 兼容读法＝执行槽自干
+node-architect\skill\/scripts/save.ps1:388:    # v1.13.4 dual-slot gate: non-empty -Accept must carry an execution slot.
+node-architect\skill\/scripts/save.ps1:399:        throw ("Accept text missing execution slot (dual-slot rule v1.13.4, PROTOCOL rule 7). Append '" + $hintRelay + "' (relay: 7-col table required in plans/) or '" + $hintSelf + "' (self-dry with reason).")
+node-architect\skill\/SKILL.md:3:version: 1.13.4
+node-architect\skill\/SKILL.md:15:2. **节点先行**：任何长于一次会话的工作，先在 `PROGRESS.md` 登记节点（名称 + 验收标准〔末尾带 `执行:`＋`收口:` **委派双槽**，无执行槽登记被拒（v1.13.4）〕+ owner 会话；登记走 `scripts/save.ps1 next-node` 原子取号——锁内全表扫描取 max+1，防并发撞号），并把下一步的设计要点写入 `CONTEXT.md` 的"下一步"，再写代码。地图先于道路。登记后、写代码前完成**开工侦察**（测试基建盘点 / 新依赖打样 / 门禁合并；结论用 `save checkpoint -Recon` 登记，verify 对缺失者 WARN——见 PROTOCOL「执行效率协议」）。
+node-architect\skill\/SKILL.md:26:- **委派双槽（v1.13.4）**：登记的验收标准末尾必带执行槽＋收口槽——`执行:执行接力`（预估 >30min 或 ≥3 任务；plans 落七列接力表，执行会话照单派棒**禁主会话写源码**）或 `执行:—(自干理由)`（**没有默认值**；#273 实测「要不要派」永远判自干，只能必填槽强制）；`收口:独立复审`（有新代码默认必做，verify 软校验复审留痕兜底，豁免写理由）。决策表见 AGENTS.md。
+[exit code: 0]
+
+=== Command: Same-Protocol normalization check (.nodes\PROTOCOL.md vs master) ===
+VERIFICATION SUCCESS: .nodes/PROTOCOL.md is verbatim identical to master node-architect/skill/references/PROTOCOL.md after version normalization.
+[exit code: 0]
+
+=== Command: Get-FileHash master vs .agents mirror ===
+
+Algorithm Hash                                                             Path
+--------- ----                                                             ----
+SHA256    40C0CBE9A4BC711CE8944AC384B2B183D9BD01E09026411063E1DEDFFB530905 E:\www\dsh-base\node-architect\skill\referen…
+SHA256    40C0CBE9A4BC711CE8944AC384B2B183D9BD01E09026411063E1DEDFFB530905 E:\www\dsh-base\.agents\skills\node-architec…
+SHA256    EED104C88259CCC1E4B8A1AA2FE2BDB79590A7FCC3ED2AF8EB87A581A4B270F3 E:\www\dsh-base\node-architect\skill\SKILL.md
+SHA256    EED104C88259CCC1E4B8A1AA2FE2BDB79590A7FCC3ED2AF8EB87A581A4B270F3 E:\www\dsh-base\.agents\skills\node-architec…
+[exit code: 0]
+

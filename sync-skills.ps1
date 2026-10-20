@@ -120,6 +120,57 @@ foreach ($p in $Projects) {
   }
 }
 
+# 3.4 DSH drop spot assertions & batch plan template
+$nBatch = [Text.Encoding]::UTF8.GetString([byte[]](0xE6,0xAF,0x8F,0xE6,0x89,0xB9,0xE4,0xB8,0x80,0xE6,0xAC,0xA1,0xE6,0xB6,0x88,0xE6,0x81,0xAF,0xE5,0xB9,0xB6,0xE5,0x8F,0x91,0xE6,0xB4,0xBE,0xE5,0x8F,0x91))
+$nKey   = [Text.Encoding]::UTF8.GetString([byte[]](0xE6,0x89,0xB9,0xE5,0x88,0x97,0x3D,0xE4,0xB8,0xBB,0xE9,0x94,0xAE))
+$nSame  = [Text.Encoding]::UTF8.GetString([byte[]](0xE5,0xBF,0x85,0xE9,0xA1,0xBB,0xE5,0x90,0x8C,0xE5,0x8F,0xB7))
+
+$dshMasterPath   = Join-Path $root '.dsh\skills\dsh-run.md'
+$dshDeployedPath = 'E:\.dsh\skills\dsh-run.md'
+$dshResiduePath  = 'E:\.dsh\skills\node-run.md'
+$batchPlanPath   = Join-Path $root 'node-architect\skill\references\templates\BATCH-PLAN.md'
+
+# 1. dsh-run master key sentence
+$mExists = Test-Path $dshMasterPath
+$mOk = $false
+if ($mExists) {
+  $mOk = (Get-Content $dshMasterPath -Raw -Encoding UTF8).Contains($nBatch)
+  if (-not $mOk) { Write-Host ("KEY SENTENCE MISSING: {0}" -f $dshMasterPath) }
+} else {
+  Write-Host ("MISSING PATH: {0}" -f $dshMasterPath)
+}
+Add-Result 'dsh-run master' 'dsh-run master key sentence' $mOk
+
+# 2. dsh-run deployed key sentence
+$dExists = Test-Path $dshDeployedPath
+$dOk = $false
+if ($dExists) {
+  $dOk = (Get-Content $dshDeployedPath -Raw -Encoding UTF8).Contains($nBatch)
+  if (-not $dOk) { Write-Host ("KEY SENTENCE MISSING: {0}" -f $dshDeployedPath) }
+} else {
+  Write-Host ("MISSING PATH: {0}" -f $dshDeployedPath)
+}
+Add-Result 'dsh-run deployed' 'dsh-run deployed key sentence' $dOk
+
+# 3. dsh-run no node-run residue
+$rExists = Test-Path $dshResiduePath
+if ($rExists) {
+  Write-Host ("UNEXPECTED RESIDUE PATH: {0}" -f $dshResiduePath)
+}
+Add-Result 'dsh-run deployed' 'dsh-run no node-run residue' (-not $rExists)
+
+# 4. BATCH-PLAN batch primary key
+$bpExists = Test-Path $batchPlanPath
+$bpOk = $false
+if ($bpExists) {
+  $bpContent = Get-Content $batchPlanPath -Raw -Encoding UTF8
+  $bpOk = ($bpContent.Contains($nKey) -and $bpContent.Contains($nSame))
+  if (-not $bpOk) { Write-Host ("KEY SENTENCE MISSING: {0}" -f $batchPlanPath) }
+} else {
+  Write-Host ("MISSING PATH: {0}" -f $batchPlanPath)
+}
+Add-Result 'BATCH-PLAN template' 'BATCH-PLAN batch primary key' $bpOk
+
 # ---------- 4) summary ----------
 Write-Host ''
 Write-Host ('==== sync-skills {0} ====' -f $(if ($CheckOnly) { 'CHECK-ONLY' } else { 'DEPLOY+VERIFY' }))

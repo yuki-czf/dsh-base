@@ -1,0 +1,114 @@
+================================================================================
+T2 验证命令与输出原文记录 (2026-10-20)
+================================================================================
+
+[CMD 1] 验收项 1: 文件存在性（git mv 历史保留验证）
+Command: Test-Path .dsh/skills/dsh-run.md
+Output: True (exit: 0)
+Command: Test-Path .dsh/skills/node-run.md
+Output: False (exit: 0)
+
+[CMD 2] 验收项 2: 批级循环与并发派发 grep 断言
+Command: (Select-String -Path .dsh/skills/dsh-run.md -Pattern "每批一次消息并发派发").Count
+Output: 2 (exit: 0) [断言 >= 1 通过]
+Command: (Select-String -Path .dsh/skills/dsh-run.md -Pattern "照单循环（每批）").Count
+Output: 1 (exit: 0) [断言 == 1 通过]
+Command: (Select-String -Path .dsh/skills/dsh-run.md -Pattern "照单循环（每棒）").Count
+Output: 0 (exit: 0) [断言 == 0 通过]
+
+[CMD 3] 验收项 3: 防幻觉锚定与关键条款 grep 断言
+Command: (Select-String -Path .dsh/skills/dsh-run.md -Pattern "推荐分支直行").Count
+Output: 1 (exit: 0) [断言 >= 1 通过]
+Command: (Select-String -Path .dsh/skills/dsh-run.md -Pattern "棒停批不停").Count
+Output: 1 (exit: 0) [断言 >= 1 通过]
+Command: (Select-String -Path .dsh/skills/dsh-run.md -Pattern "文件路径:行号").Count
+Output: 2 (exit: 0) [断言 >= 1 通过]
+Command: (Select-String -Path .dsh/skills/dsh-run.md -Pattern "原 node-run").Count
+Output: 2 (exit: 0) [断言 >= 1 通过]
+
+[CMD 4] 验收项 4: frontmatter 与触发词
+Command: Select-String -Path .dsh/skills/dsh-run.md -Pattern "^name: dsh-run$"
+Output: name: dsh-run (exit: 0)
+Command: Select-String -Path .dsh/skills/dsh-run.md -Pattern "dsh-run <节点编号或名称>.*（原 node-run，DSH NEXT 专用）"
+Output: description: 执行节点（DSH 版）：先加载节点协议与节奏纪律 skill，再读档→基线快照→接力派棒（subagent 并发+完成通知）→复审→收口存档。用法：斜杠命令面选 dsh-run 或直接说「dsh-run <节点编号或名称> [补充要求]」（原 node-run，DSH NEXT 专用），目标节点写在用户消息里。当用户点名要执行某个已登记节点、或节点行带「执行:执行接力」需要照接力表派棒时使用。 (exit: 0)
+
+[CMD 5] 验收项 5: 头注与版本位
+Command: Select-String -Path .dsh/skills/dsh-run.md -Pattern "pi-tempo v1.0.11 DSH 方言 · 独立血统 dsh-run（node-run=PI-Desktop 血统，语义分家）"
+Output: <!-- pi-tempo v1.0.11 DSH 方言 · 独立血统 dsh-run（node-run=PI-Desktop 血统，语义分家） · 落位 .dsh/skills/dsh-run.md（rank 100，user-invocable 默认开） --> (exit: 0)
+Command: Select-String -Path .dsh/skills/dsh-run.md -Pattern "v1.13.4"
+Output: <!-- 派发原语：Task/TaskWait → DSH subagent（异步、同消息多调用=并行、完成主动通知）/ workflow parallel·pipeline；存档动作按本机 node-architect v1.13.4（save/checkpoint/commit/verify/verify-batch，无 finish） --> (exit: 0)
+Command: Select-String -Path .dsh/skills/dsh-run.md -Pattern "<!-- v1.0.11 批级循环：每批一次消息并发派发 ＋ 模型分档 -->"
+Output: <!-- v1.0.11 批级循环：每批一次消息并发派发 ＋ 模型分档 --> (exit: 0)
+
+[CMD 6] 验收项 6: 模型路由与降级说明
+Command: Select-String -Path .dsh/skills/dsh-run.md -Pattern "cpa/gemini-3.8-flash"
+Output:
+42: （执行棒固定路由＝`cpa/gemini-3.8-flash`。subagent 的 provider/model 参数仅在 Settings→Subagent 模型白名单开启后才出现在 schema 里；若当前会话 schema 无此参数 → 退化派发**不带 provider/model**（继承父会话模型）并在 facts 里记录。`workflow` 的 `parallel()`/`pipeline()` 承载批量编排与 schema 校验。）
+55: - 执行棒固定 `cpa/gemini-3.8-flash` 额度档。
+Command: Select-String -Path .dsh/skills/dsh-run.md -Pattern "deepseek-v4.1-flash"
+Output:
+50: 全棒完成 → 复审棒：`subagent(agent_preset='independent-review', prompt=<复审简报>, provider='cpa', model='deepseek-v4.1-flash')`（审查纪律由 preset persona 常驻；复审简报=验收标准+改动文件清单（`git diff --name-only`）+关键 diff 摘要），**异构模型分档**（复审棒路由＝`deepseek-v4.1-flash`；白名单未开则退化继承父会话模型）；**报告须含逐项行号证据（文件路径:行号），无锚定或报告不完整即重派**。复审发现问题 → 派**单支返工棒**（agent_preset='gemini-fixer'，subagent 派发）吃完所有发现，主会话禁参与返工；返工棒重派 ≥2 次熔断。
+54: - 主会话（调度器）与复审棒建议 `deepseek-v4.1-flash` 速度档（主会话模型由用户建会话时选择，模板只提示）。
+
+[CMD 7] 验收项 7: subagent 与 save.ps1 计数
+Command: (Select-String -Path .dsh/skills/dsh-run.md -Pattern "subagent").Count
+Output: 6 (exit: 0) [改前为 5，6 >= 5 通过]
+Command: (Select-String -Path .dsh/skills/dsh-run.md -Pattern "save.ps1").Count
+Output: 6 (exit: 0) [通过]
+
+[CMD 8] 验收项 8: 文档引用与版本位（文件集 B-F）
+Command: Select-String -Path research/dsh-adaptation-drafts/install-stack.md -Pattern "dsh-run"
+Output:
+28: - **三 skill（项目级，随仓库走）**：`.agents/skills/pi-tempo/`（含 subagents/ 三模板）、`.agents/skills/prometheus-spec/`、`.dsh/skills/dsh-run.md`
+87: - 用户级 skill 副本：删 `~/.agents/skills/{pi-tempo,prometheus-spec}` 与 `~/.dsh/skills/dsh-run.md`（若做过 S6）
+92: 1. **技能作用域**：项目级（200）遮蔽用户级（500）——在本仓库工作区里，dsh-run/A2 引用的是仓库内原路由；其他项目用 S6 副本的路由
+
+Command: Select-String -Path research/dsh-desktop-adaptation.md -Pattern "1.13.4|dsh-run"
+Output:
+15: - 完整流程：prometheus-spec 出计划五件套（`changes/{需求名}/`：proposal/specs/design/tasks/execution-contract）→ node-architect（v1.13.4，委派双槽）登记节点 + `plans/<名>.md` 七列接力表 → PI-Desktop `node-run` 逐棒派 `Task(gemini-fixer)`（Gemini 3.8 Flash）→ `.nodes/relay/<名>/facts.md` 记账 → 越界检查（`git status --porcelain` 对基线快照）→ independent-review 异构复审 → node-save 存档
+25: | 云端母版版本 | node-architect **v1.13.4**、pi-tempo **v1.0.9**、prometheus-spec **v1.1**（GitHub yuki-czf/dsh-base main） | 语义基准以云端为准 |
+102: | A3 | **dsh-run** | `.dsh/skills/dsh-run.md`（平铺、user-invocable 默认即开） | 语义照 `node-run.lab.md`：读档（CONTEXT+PROGRESS+接力表一批并发读）→ `git status --porcelain > .nodes/relay/<名>/baseline.txt` 基线快照 → 逐棒（读模板+六段简报 → `subagent(..., provider='__GEMINI_ROUTE__', model='gemini-3.8-flash')` → 报告事实追加 facts.md → 越界检查=快照后新增且不在本棒授权集的行）→ 复审棒（**换 provider** 异构）→ 存档收口；含 ANCHOR 行纪律与会话熔断线 |
+137: □ 本项目会话技能目录出现 pi-tempo、prometheus-spec；'/' 命令面出现 dsh-run（GUI 实测）
+
+Command: Select-String -Path research/dsh-adaptation-drafts/discrepancies.md -Pattern "1.0.11|1.13.4|dsh-run"
+Output:
+28: 2. **云端 pi-tempo 版本**：raw main 实为 **v1.0.11**（蓝图 §2/§4 写 v1.0.9）。按蓝图「语义基准以云端为准」执行 v1.0.11；方言改动注记已随文件头部声明。
+30: 4. **本机 node-architect 为 v1.10.1，无 `finish` 动作**：云端 SKILL.md（v1.13.4）推荐 `save.ps1 finish` 快路，本机不存在该子命令。A3（dsh-run）存档命令只引用本机存在动作（save/checkpoint/commit/verify/verify-batch + `-Completed`）。
+45: 13. **`__GEMINI_ROUTE__` 回填定案（2026-10-18）**：铁律3 原文「不编造路由名」——最终也没编：键名从用户自己的 `~/.dsh/profiles/desktop/cordis.yml` llm-pi-ai providers 字典提取（**`vps-direct`**，displayName「VPS Direct」，模型 `gemini-3.8-flash`，推理档 low/medium/high；提取过程密钥类字段全部打码、未显示任何值）。已替换处：dsh-run 派发行+回填注记+停止条件、A2 fixer/scout 注释。复审异构路由定为 `zai-coding-cn/glm-5.3-flash`（与 gemini 实现棒不同家族；重活可换 glm-5.3）。**剩余用户动作**：设置→内置插件→官方分组→「子智能体」卡片→「模型选择」开「允许 Agent 为子智能体选择模型」+ 白名单加 `vps-direct/gemini-3.8-flash`（该卡片由 dsh-client-ui-settings-subagent 渲染，客户端标签已核实存在；仅影响新会话）。若卡片真不渲染，备选＝在 patch 层直写 `subagent-model-selection-settings` 行 config（enabled + allowedModels）。另：本机已装 python `zstandard` 包（解 session 日志用），DSH 会话日志在 `~/.dsh/sessions/<workspace-dir>/<id>/session.v4.jsonl.zstd`。
+
+Command: Select-String -Path AGENTS.md -Pattern "1.13.4"
+Output:
+2: ## 节点协议（node-architect v1.13.4）
+
+Command: Select-String -Path pi-tempo/README.md -Pattern "v1.0.11|node-architect v1.13.4"
+Output:
+54: - **v1.0.11**（2026-10-18）：**双轨自检与返工棒**——#274 接力首弹复盘（147min／13 Task／fixer 8/8 全绿，但主会话 78 Edit＋218 Bash＋433 Read 与棒赛写同一批文件：R6 三弹、2 次棒重派、ctx 408.9k、返工尾 33min 仍双轨）。四条规则：①每棒收敛自检——`git status --porcelain` 对比授权集，授权集外改动＝调度器抢写，**停止而非重派**；②等待窗口禁 Read 源码本体；③复审发现→单支返工棒单一 owner 吃完全部发现，主会话禁参与返工；④可选只读模式（会话级只读且不阻 Task 时开工即切，物理剥夺 Edit/Write）。病根收窄定论：判断层（要不要派）已治愈（程序层 100% 照档案执行），唯一残存＝等待窗口白名单失守（R1→R2→274 三连），提示词禁令无效，改用程序化自检步骤＋停止反应。
+55: - **v1.0.9**（2026-10-18）：**执行槽闸（委派双槽）**——#273 复盘：openchamber 规划端读到 v1.13.2 判据、承认 9 任务 18 文件 >30min，仍以「contract 未声明」自设豁免 → 执行端忠实自干 57min／ctx 498.6k／看门狗 6 弹。修复＝委派拆双必填槽：`执行:执行接力`（>30min 或 ≥3 任务；plans 七列接力表）或 `执行:—(自干理由)`——**没有默认值**，`save.ps1 next-node` 对缺执行槽的 -Accept **硬拒绝**（exit 1；拒绝/放行两路径实测）；/node-run 加 2.4 执行槽闸（无槽且任务 ≥3 → 停下补登记再开工，不默认自干）；execution-contract 须含 Execution Topology 节（方向恒为 行→contract）。配套 node-architect v1.13.4（PROTOCOL 规则 7/8 重写＋SKILL＋PROGRESS 模板）。
+
+================================================================================
+三段式汇报
+================================================================================
+
+① 改动清单
+- .dsh/skills/dsh-run.md:1-85 — git mv 重命名并重构：升级为「照单循环（每批）」与「每批一次消息并发派发」；增补批内失败处置、棒停批不停、推荐分支直行、文件路径:行号锚定、40步上限与模型分档；执行棒与复审棒路由更新为 cpa。
+- research/dsh-adaptation-drafts/install-stack.md:28,87,92 — node-run 引用更新为 dsh-run。
+- research/dsh-desktop-adaptation.md:15,25,102,137 — 更新 node-architect 1.13.4 与 dsh-run 引用。
+- research/dsh-adaptation-drafts/discrepancies.md:28,30,45 — 更新 pi-tempo 1.0.11、node-architect 1.13.4 与 dsh-run 引用。
+- AGENTS.md:2 — 节点协议版本升级为 node-architect v1.13.4。
+- pi-tempo/README.md:54,55 — 版本位更新为 v1.0.11 与 node-architect v1.13.4，保留 PI 语境 node-run 原文。
+
+② 验证命令与输出原文关键行
+- Test-Path .dsh/skills/dsh-run.md → True (exit: 0)
+- Test-Path .dsh/skills/node-run.md → False (exit: 0)
+- (Select-String -Path .dsh/skills/dsh-run.md -Pattern "每批一次消息并发派发").Count → 2 (exit: 0)
+- (Select-String -Path .dsh/skills/dsh-run.md -Pattern "照单循环（每批）").Count → 1 (exit: 0)
+- (Select-String -Path .dsh/skills/dsh-run.md -Pattern "照单循环（每棒）").Count → 0 (exit: 0)
+- (Select-String -Path .dsh/skills/dsh-run.md -Pattern "推荐分支直行").Count → 1 (exit: 0)
+- (Select-String -Path .dsh/skills/dsh-run.md -Pattern "棒停批不停").Count → 1 (exit: 0)
+- (Select-String -Path .dsh/skills/dsh-run.md -Pattern "文件路径:行号").Count → 2 (exit: 0)
+- (Select-String -Path .dsh/skills/dsh-run.md -Pattern "原 node-run").Count → 2 (exit: 0)
+- (Select-String -Path .dsh/skills/dsh-run.md -Pattern "subagent").Count → 6 (exit: 0)
+- 文档引用与版本位正则匹配全部命中目标行。
+
+③ 未决风险
+- 活体环境部署：当前修改位于工作区内 `E:\www\dsh-base`；由于沙盒限制 `E:\.dsh` 与 `C:\Users\tc` 不可写，后续将 `dsh-run.md` 部署至外部 `E:\.dsh\skills\` 以及分发 sync-skills 需由主代理或宿主环境权限处理。

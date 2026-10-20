@@ -1,0 +1,92 @@
+================================================================================
+Task 7 Evidence: Full sync-skills.ps1 deploy + 3-end verify + git staging & commit
+Date: 2026-10-20
+Workspace: E:\www\dsh-base
+================================================================================
+
+[Step 1] Full sync-skills.ps1 deploy + verify run
+Command:
+powershell -NoProfile -ExecutionPolicy Bypass -File sync-skills.ps1
+
+Exit Code: 0
+
+Output (tail 25 lines):
+[node-architect] E:\www\dsh-base -> v1.13.4
+[node-architect] E:\www\reddit\reddit-trend-tc -> v1.13.4
+[node-architect] E:\www\pi-tempo-lab -> v1.13.4
+[pi-tempo] template node-run.reddit-trend-tc.md -> E:\www\reddit\reddit-trend-tc
+[pi-tempo] template node-run.lab.md -> E:\www\pi-tempo-lab
+
+==== sync-skills DEPLOY+VERIFY ====
+pi-tempo master SKILL.md               version=1.0.11 parsed                        OK
+global ~/.agents/skills                SKILL version 1.0.11 == master               OK
+master template lab                    marker v1.0.11 == skill v1.0.11              OK
+master template reddit                 marker v1.0.11 == skill v1.0.11              OK
+deploy lab .pi/prompts                 marker v1.0.11 == skill v1.0.11              OK
+deploy reddit .pi/prompts              marker v1.0.11 == skill v1.0.11              OK
+subagent gemini-fixer                  global == master (hash)                      OK
+subagent gemini-scout                  global == master (hash)                      OK
+subagent independent-review            global == master (hash)                      OK
+node-arch dsh-base mirror              skill PROTOCOL == master (hash)              OK
+node-arch dsh-base .nodes              .nodes/PROTOCOL == master (norm)             OK
+node-arch reddit-trend-tc mirror       skill PROTOCOL == master (hash)              OK
+node-arch reddit-trend-tc .nodes       .nodes/PROTOCOL == master (norm)             OK
+interlock reddit-trend-tc              node-run 2.5 <-> PROTOCOL relay              OK
+node-arch pi-tempo-lab mirror          skill PROTOCOL == master (hash)              OK
+node-arch pi-tempo-lab .nodes          .nodes/PROTOCOL == master (norm)             OK
+interlock pi-tempo-lab                 node-run 2.5 <-> PROTOCOL relay              OK
+dsh-run master                         dsh-run master key sentence                  OK
+dsh-run deployed                       dsh-run deployed key sentence                OK
+dsh-run deployed                       dsh-run no node-run residue                  OK
+BATCH-PLAN template                    BATCH-PLAN batch primary key                 OK
+21 check(s), 0 failure(s)
+
+--------------------------------------------------------------------------------
+
+[Step 2] Multi-point Verification
+
+2a. Key sentence assertion in deployed dsh-run.md:
+Command:
+Select-String -Path 'E:\.dsh\skills\dsh-run.md' -Pattern '每批一次消息并发派发'
+Exit Code: 0
+Matches found: 2 (>= 1)
+E:\.dsh\skills\dsh-run.md:8:<!-- v1.0.11 批级循环：每批一次消息并发派发 ＋ 模型分档 -->
+E:\.dsh\skills\dsh-run.md:42:   按接力表划分批次，每批包含 1~3 支同批号无依赖的执行棒。**每批一次消息并发派发**：
+
+2b. Legacy node-run.md deletion assertion in E:\.dsh\skills:
+Command:
+Test-Path 'E:\.dsh\skills\node-run.md'
+Exit Code: 0
+Result: False
+
+2c. File hash assertion (master vs deployed dsh-run.md):
+Command:
+Get-FileHash 'E:\www\dsh-base\.dsh\skills\dsh-run.md', 'E:\.dsh\skills\dsh-run.md'
+Exit Code: 0
+Master   : FC5E769EAA9B2EAB3EECD35E384E0B5747B0196CA5DE40345D95F3C1CD68E9D6
+Deployed : FC5E769EAA9B2EAB3EECD35E384E0B5747B0196CA5DE40345D95F3C1CD68E9D6
+Equal    : True
+
+2d. sync-skills.ps1 -CheckOnly assertion:
+Command:
+powershell -NoProfile -ExecutionPolicy Bypass -File .\sync-skills.ps1 -CheckOnly
+Exit Code: 0
+Output tail:
+dsh-run master                         dsh-run master key sentence                  OK
+dsh-run deployed                       dsh-run deployed key sentence                OK
+dsh-run deployed                       dsh-run no node-run residue                  OK
+BATCH-PLAN template                    BATCH-PLAN batch primary key                 OK
+21 check(s), 0 failure(s)
+
+2e. Version marker (v1.0.11) assertion across 4 templates:
+- E:\www\dsh-base\pi-tempo\templates\node-run.lab.md:
+  Marker: <!-- pi-tempo v1.0.11 · 2026-10-20 · 与 skill 同版；改 skill 后同步本模板并递增此行 -->
+- E:\www\dsh-base\pi-tempo\templates\node-run.reddit-trend-tc.md:
+  Marker: <!-- pi-tempo v1.0.11 · 2026-10-20 · 与 skill 同版；改 skill 后同步本模板并递增此行 -->
+- E:\www\pi-tempo-lab\.pi\prompts\node-run.md:
+  Marker: <!-- pi-tempo v1.0.11 · 2026-10-20 · 与 skill 同版；改 skill 后同步本模板并递增此行 -->
+- E:\www\reddit\reddit-trend-tc\.pi\prompts\node-run.md:
+  Marker: <!-- pi-tempo v1.0.11 · 2026-10-20 · 与 skill 后同步本模板并递增此行 -->
+Result: All 4 templates confirm first marker is v1.0.11.
+
+--------------------------------------------------------------------------------

@@ -25,7 +25,7 @@
 
 ## 2. 交付清单（全部在本仓库内，P1 已验）
 
-- **三 skill（项目级，随仓库走）**：`.agents/skills/pi-tempo/`（含 subagents/ 三模板）、`.agents/skills/prometheus-spec/`、`.dsh/skills/node-run.md`
+- **三 skill（项目级，随仓库走）**：`.agents/skills/pi-tempo/`（含 subagents/ 三模板）、`.agents/skills/prometheus-spec/`、`.dsh/skills/dsh-run.md`
 - **bundle**：`research/dsh-adaptation-drafts/bundle/`（五预设 + tool-subagent 四元白名单 + subagent-model-selection override）
 - **人设快照**：`research/dsh-adaptation-drafts/tool-management-personas/`（4 个 md）
 - **参考**：`discrepancies.md`（16 条台账）、`README.md`（目录导读）
@@ -84,12 +84,12 @@ GUI 兜底：侧栏「插件」页手动安装同目录。
 
 - `plugin_manager remove_bundle @local/dsh-prometheus-spec`（+ 卸 tool-management 同法）
 - 删 `~/.dsh/tool-management/subagents/` 下四个人设与 `~/.dsh/dsh-stack/`
-- 用户级 skill 副本：删 `~/.agents/skills/{pi-tempo,prometheus-spec}` 与 `~/.dsh/skills/node-run.md`（若做过 S6）
+- 用户级 skill 副本：删 `~/.agents/skills/{pi-tempo,prometheus-spec}` 与 `~/.dsh/skills/dsh-run.md`（若做过 S6）
 - 仓库本体未被修改（S2 起全部动副本），无需还原
 
 ## 5. 已知边界（照搬本仓结论，安装时不需处理）
 
-1. **技能作用域**：项目级（200）遮蔽用户级（500）——在本仓库工作区里，node-run/A2 引用的是仓库内原路由；其他项目用 S6 副本的路由
+1. **技能作用域**：项目级（200）遮蔽用户级（500）——在本仓库工作区里，dsh-run/A2 引用的是仓库内原路由；其他项目用 S6 副本的路由
 2. **宿主面工具泄漏**：子会话可见宿主级工具（含写能力的），preset 只读保证有边界（discrepancies #15）——policy 插件二期议题
 3. **模型选择 override 与 GUI**：Desktop 无子智能体设置卡（#14），override 是唯一入口；若未来版本渲染该卡，GUI 编辑与 config 层的优先级未验证
 4. **预设白名单**：仅含 S2 两条路由；加新路由须改 bundle 副本 yml 的 `allowedModels` 并重装（remove→install）
