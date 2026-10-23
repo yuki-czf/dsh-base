@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Speed</title>
+<style>
+  :root { color-scheme: light dark; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: var(--oc-font, -apple-system, "SF Pro Text", system-ui, "Microsoft YaHei", sans-serif);
+    font-size: 12px;
+    line-height: 1.45;
+    color: var(--oc-fg, inherit);
+    background: transparent;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  #root { padding: 8px 6px; }
+
+  /* ---- macOS 卡片：用前景色淡染，自动适配浅/深主题（iframe 里 backdrop-filter 拿不到背后内容，不能依赖） ---- */
+  .frost {
+    background: color-mix(in srgb, var(--oc-fg, #888888) 7%, transparent);
+    border: 1px solid color-mix(in srgb, var(--oc-fg, #888888) 11%, transparent);
+    border-radius: 12px;
+    padding: 10px 11px;
+    display: flex; flex-direction: column; gap: 6px;
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .row { display: flex; align-items: baseline; gap: 7px; min-width: 0; flex-wrap: wrap; }
+  .spacer { flex: 1 1 auto; min-width: 0; }
+
+  .breath {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--oc-muted, #999);
+    align-self: center; flex: none;
+    transition: background .3s ease;
+  }
+  .breath.live {
+    background: var(--oc-success, #22a06b);
+    animation: br 1.6s ease-in-out infinite;
+  }
+  .breath.wait {
+    background: transparent; border: 1.5px solid var(--oc-warning, #e2a336);
+    animation: br 1.6s ease-in-out infinite;
+  }
+  @keyframes br {
+    0%, 100% { opacity: .35; transform: scale(.85); }
+    50%      { opacity: 1;   transform: scale(1.15); }
+  }
+
+  .big {
+    font-family: var(--oc-mono, ui-monospace, "SF Mono", Consolas, monospace);
+    font-size: 26px; font-weight: 700;
+    letter-spacing: -.03em;
+    font-variant-numeric: tabular-nums;
+    display: inline-block; transform-origin: 50% 60%;
+    line-height: 1.1;
+  }
+  .big.pop { animation: pop .5s cubic-bezier(.34, 1.56, .64, 1); }
+  @keyframes pop {
+    0%   { transform: scale(.82); opacity: .45; }
+    100% { transform: scale(1);   opacity: 1; }
+  }
+
+  .unit { font-size: 11px; color: var(--oc-muted, #999); flex: none; }
+  .lbl  { font-size: 10px; color: var(--oc-muted, #999); flex: none; }
+  .kv {
+    font-family: var(--oc-mono, ui-monospace, "SF Mono", Consolas, monospace);
+    font-size: 11.5px; font-variant-numeric: tabular-nums;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0;
+  }
+
+  /* ---- 速率条 ---- */
+  .meter {
+    height: 6px; border-radius: 4px; overflow: hidden; position: relative;
+    background: color-mix(in srgb, var(--oc-muted, #999) 26%, transparent);
+    margin: 2px 0 1px;
+  }
+  .meter > i {
+    position: absolute; inset: 0 auto 0 0; width: 0;
+    border-radius: 4px;
+    background: linear-gradient(90deg,
+      color-mix(in srgb, var(--oc-primary, #3b82f6) 55%, var(--oc-success, #22a06b)),
+      var(--oc-success, #22a06b));
+    transition: width .8s cubic-bezier(.25, .1, .25, 1), background .3s ease;
+  }
+
+  /* ---- 曲线 ---- */
+  .sparkbox {
+    height: 38px; border-radius: 8px; position: relative; overflow: hidden;
+    background: linear-gradient(180deg,
+      color-mix(in srgb, var(--oc-primary, #3b82f6) 8%, transparent), transparent);
+  }
+  .spark { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .spark-empty {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    font-size: 10px; color: var(--oc-muted, #999);
+  }
+  .spark .line {
+    stroke: var(--oc-primary, #3b82f6); stroke-width: 2; fill: none;
+    stroke-linecap: round; stroke-linejoin: round;
+    stroke-dasharray: 1000;
+    animation: draw 1.8s cubic-bezier(.25, .1, .25, 1) both;
+  }
+  @keyframes draw { from { stroke-dashoffset: 1000 } to { stroke-dashoffset: 0 } }
+  .spark .fill {
+    fill: color-mix(in srgb, var(--oc-primary, #3b82f6) 16%, transparent);
+    animation: fade .9s ease-out both;
+  }
+
+  .chip {
+    font-size: 9px; padding: 1px 6px; border-radius: 6px; align-self: center; flex: none;
+    background: color-mix(in srgb, var(--oc-muted, #999) 22%, transparent);
+    color: var(--oc-muted, #999);
+    transition: background .3s ease, color .3s ease;
+  }
+  .chip.fast { background: color-mix(in srgb, var(--oc-success, #22a06b) 22%, transparent); color: var(--oc-success, #22a06b); }
+  .chip.mid  { background: color-mix(in srgb, var(--oc-warning, #e2a336) 24%, transparent); color: var(--oc-warning, #e2a336); }
+  .chip.slow { background: color-mix(in srgb, var(--oc-error, #d64545) 20%, transparent); color: var(--oc-error, #d64545); }
+
+  table { width: 100%; border-collapse: collapse; font-size: 11px; margin-top: 2px; table-layout: fixed; }
+  th, td { padding: 3px 3px; text-align: right; font-variant-numeric: tabular-nums;
+           font-family: var(--oc-mono, ui-monospace, Consolas, monospace);
+           white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  th:nth-child(1), td:nth-child(1) { width: 42%; text-align: left; }
+  th:nth-child(2), td:nth-child(2) { width: 16%; }
+  th:nth-child(3), td:nth-child(3) { width: 20%; }
+  th:nth-child(4), td:nth-child(4) { width: 22%; }
+  th { color: var(--oc-muted, #999); font-weight: 500; font-family: var(--oc-font, inherit);
+       font-size: 9px; text-transform: uppercase; letter-spacing: .04em; }
+  th:first-child, td:first-child { text-align: left; }
+  tbody tr { transition: background .15s ease; }
+  tbody tr:hover { background: color-mix(in srgb, var(--oc-fg, #000) 5%, transparent); }
+
+  /* 窄面板（<260px）：模型表只留模型和 t/s，隐藏请求数与 TTFT 列 */
+  @media (max-width: 260px) {
+    th:nth-child(2), td:nth-child(2), th:nth-child(4), td:nth-child(4) { display: none; }
+    th:nth-child(1), td:nth-child(1) { width: 64%; }
+    th:nth-child(3), td:nth-child(3) { width: 36%; }
+    .big { font-size: 24px; }
+  }
+
+  .dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; margin-right: 4px; background: var(--oc-muted, #999); }
+  .dot.fast { background: var(--oc-success, #22a06b); }
+  .dot.mid  { background: var(--oc-warning, #e2a336); }
+  .dot.slow { background: var(--oc-error, #d64545); }
+
+  .err { color: var(--oc-error, #d64545); font-size: 11px; }
+  .muted { color: var(--oc-muted, #999); }
+  .hint { font-size: 10px; color: var(--oc-muted, #999); margin-top: 1px; }
+
+  .stagger > * { animation: fade .5s ease-out both; }
+  .stagger > *:nth-child(2) { animation-delay: .08s; }
+  .stagger > *:nth-child(3) { animation-delay: .16s; }
+  .stagger > *:nth-child(4) { animation-delay: .24s; }
+  @keyframes fade { from { opacity: 0 } to { opacity: 1 } }
+
+  @media (prefers-reduced-motion: reduce) {
+    .breath.live, .breath.wait { animation: none; opacity: 1; transform: none; }
+    .big.pop { animation: none; }
+    .spark .line, .spark .fill { animation: none; }
+    .stagger > * { animation: none; }
+    .frost, .meter > i, tbody tr, .chip, .breath { transition: none; }
+  }
+</style>
+</head>
+<body>
+<div id="root"><span class="muted">Speed: 等待会话…</span></div>
+<script src="main.js"></script>
+</body>
+</html>
