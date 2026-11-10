@@ -1,1 +1,1 @@
-v1.2.0 | 2026-11-10 | native-lane upgrade: bind cpa-native (live thought stream) / execution-thinking-mode rule (measured ~40-57% less thinking) / 200K context red line (18s/100K cliff beyond 300K) / archive reads via .nodes/CONTEXT.md only / dedicated gs-explore subagent
+v1.2.1 | 2026-11-10 | thinking-anchor upgrade: rule 0 now uses measured best phrasing (95% thought reduction on executor tasks, 125 vs 4850 median, correctness 3/3) with escape hatch for exhaustive-proof subtasks; gs-explore gets the same anchor; maxOutputTokens verified NOT a thinking cap (dropped)
