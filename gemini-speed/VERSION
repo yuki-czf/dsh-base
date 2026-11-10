@@ -1,1 +1,1 @@
-v1.1.0 | 2026-11-10 | pure-executor rewrite: lock-to-listed-files / same-turn parallel tool calls / batch-based wrap-up; dropped all .handoff & /wrapup refs
+v1.2.0 | 2026-11-10 | native-lane upgrade: bind cpa-native (live thought stream) / execution-thinking-mode rule (measured ~40-57% less thinking) / 200K context red line (18s/100K cliff beyond 300K) / archive reads via .nodes/CONTEXT.md only / dedicated gs-explore subagent
