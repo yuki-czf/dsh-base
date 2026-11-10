@@ -1,0 +1,6 @@
+{
+  "title": {
+    "model": "cpa/gemini-3.8-flash-high",
+    "system": "生成不超过10字的会话标题。直接输出标题文本，禁止思考过程，禁止解释。"
+  }
+}

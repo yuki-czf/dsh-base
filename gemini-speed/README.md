@@ -1,10 +1,11 @@
-# gemini-speed（速度模式执行 Agent，v1.2.1）
+# gemini-speed（速度模式执行 Agent，v1.2.2）
 
 OpenCode / OpenChamber 的全局速度 Agent 套装：主 Agent `gemini-speed` + 专属探索子代理 `gs-explore`，绑定 `cpa-native/gemini-3.8-flash-high`（native 思考流车道，约 83% 请求 2-5 秒可见思考流）。
 
-## v1.2.1 要点
+## v1.2.2 要点
 
-- **思考锚点执行模式**（铁律 0 升级）：实测最优措辞——执行类任务思考量中位 4850 → 125（-95%），正确率不伤（代码修复 3/3）；穷举/证明类子任务有逃生舱（先声明再深想）
+- **标题税修复**：V2 的隐藏 `title` agent 会继承会话模型——在 Gemini 免费车道上实测 3/3 赌中深思考（387 token 标题请求思考 3700+，串行堵住新会话首条回复 20-34 秒）。安装器现在自动把 `agents.title` 合并进 `opencode.json`：钉死 chat 车道模型 + 锚点系统提示，把标题思考量压到两位数。合并幂等（已存在则跳过，`-ForceTitle` 强制重套）、改前备份
+- **思考锚点执行模式**（铁律 0）：实测最优措辞——执行类任务思考量中位 4850 → 125（-95%），正确率不伤；穷举/证明类子任务有逃生舱
 - **native 车道绑定**：`cpa-native/` 走 Google 原生协议，思考流实时可见
 - **200K 上下文红线**：200K 是本车道舒适上限（首字约 11s）；300K+ 每百 K 多付约 18 秒
 - **专属子代理 gs-explore**：探索活外包（独立上下文用完即焚），只回结论摘要；不占用、不修改任何全局子代理
@@ -28,9 +29,10 @@ powershell -ExecutionPolicy Bypass -File .\install.ps1
 
 ## 行为
 
-- 落点（两个文件）：`~/.config/opencode/agents/gemini-speed.md` 与 `~/.config/opencode/agents/gs-explore.md`
-- 已有同名文件会先备份为 `<名>.md.bak-<日期>` 再覆盖，不静默
-- 卸载：删除上述两个文件（连同 .bak）并重启即可，零残留
+- 落点：`~/.config/opencode/agents/gemini-speed.md` 与 `gs-explore.md`，外加把 `agents.title` 合并进 `~/.config/opencode/opencode.json`
+- 已有同名文件会先备份为 `<名>.md.bak-<日期>` 再覆盖，不静默；opencode.json 改前备份为 `opencode.json.bak-gs-title-<日期>`
+- 标题合并幂等：已有 `agents.title` 则跳过（`-ForceTitle` 强制重套）
+- 卸载：删除两个 agent 文件 + 从 opencode.json 移除 `agents.title`（或还原 bak-gs-title 备份），零残留
 
 ## 注意
 
