@@ -1,0 +1,1 @@
+v1.1.0 | 2026-11-10 | pure-executor rewrite: lock-to-listed-files / same-turn parallel tool calls / batch-based wrap-up; dropped all .handoff & /wrapup refs

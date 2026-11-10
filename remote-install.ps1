@@ -22,7 +22,7 @@ param(
   [string]$Project = (Get-Location).Path,
   [string]$Repo    = 'yuki-czf/dsh-base',
   [string]$Branch  = 'main',
-  [ValidateSet('node-architect', 'ssh-runner')]
+  [ValidateSet('node-architect', 'ssh-runner', 'gemini-speed')]
   [string]$Module  = 'node-architect',
   [string[]]$Clients = @(),
   [string]$ZipPath = '',
@@ -42,6 +42,7 @@ $Project = (Resolve-Path $Project).Path
 $moduleMap = @{
   'node-architect' = 'node-architect\install.ps1'
   'ssh-runner'     = 'mcps\ssh-runner\install.ps1'
+  'gemini-speed'   = 'gemini-speed\install.ps1'
 }
 
 # ---------- 1) get the repo zip (download or local offline copy) ----------

@@ -20,6 +20,12 @@ irm https://raw.githubusercontent.com/yuki-czf/dsh-base/main/remote-install.ps1 
 & ([scriptblock]::Create((irm https://raw.githubusercontent.com/yuki-czf/dsh-base/main/remote-install.ps1))) -Module ssh-runner
 ```
 
+### gemini-speed（速度模式执行 Agent，装到用户全局，所有项目生效）
+
+```powershell
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/yuki-czf/dsh-base/main/remote-install.ps1))) -Module gemini-speed
+```
+
 可选参数（下载后运行或用 scriptblock 传参）：`-Project <路径>`、`-Clients opencode,cursor,zed,claude`、`-Branch <分支>`；离线/内网可用 `-ZipPath <仓库zip>`。
 
 或在 AI 客户端会话中直接说：
