@@ -48,3 +48,10 @@ node_modules/
 
 # DSH 适配（节点#16）：审计用会话转录 jsonl 不入库（证据摘要已进 .nodes/ 与 discrepancies.md）
 research/dsh-adaptation-drafts/*.jsonl
+
+# hy2 客户端真实配置与密钥（只有 template 入库）
+gemini-speed/hy2/client.yaml
+gemini-speed/hy2/cpa-api-key.txt
+gemini-speed/hy2/aistudio-api-key.txt
+gemini-speed/hy2/hysteria.exe
+gemini-speed/hy2/*.log
