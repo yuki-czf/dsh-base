@@ -1,4 +1,4 @@
-# HY2 双车道客户端配置模板
+# HY2 三车道客户端配置模板
 # 用法：复制为 client.yaml，替换下面两个占位符（值从家里 C:\Users\zifeng\hy2\client.yaml 或 hy2-portable v2 包抄）
 #   __VPS_IP__         VPS 地址
 #   __TUNNEL_PASSWORD__ HY2 隧道密码
@@ -25,6 +25,9 @@ tcpForwarding:
 - name: aistudio-lane
   listen: 127.0.0.1:9444
   remote: 127.0.0.1:2048
+- name: web-lane
+  listen: 127.0.0.1:9445
+  remote: 127.0.0.1:8083
 
 bandwidth:
   up: 4 mbps
