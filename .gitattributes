@@ -1,0 +1,5 @@
+# 分发件按原始字节存储，禁止行尾/BOM 重写
+# （公司机从 raw.githubusercontent.com 下载的 bat 必须与家用机逐字节一致，cmd 对行尾敏感）
+*.bat -text
+*.cmd -text
+*.sha256 -text

@@ -16,7 +16,7 @@
 | antigravity-hans 汉化器 | v0.4.10 | 独立 exe（监视器黑窗） | 独立进程，几十 MB | 下载 + SHA256 校验 + 杀软信任区 |
 | effort-slider 滑条 | v1.2.6 | CDP 热注入 JS（免重启） | 渲染进程内几 MB | 克隆公开仓库 + Node ≥ 20 |
 | 512K 上下文补丁 | 上游 `267ab59a` | `language_server.exe` 二进制补丁 | 零常驻，大上下文会话时按需增长 | 拷 `tools/context-autofix` 目录 + Python 3 |
-| 启动器 bat | 2026-11-15b | 一次性脚本，跑完即退 | 无 | 复制 + 改代理端口/滑条路径 |
+| 启动器 bat | 2026-11-15b | 一次性脚本，跑完即退 | 无 | 从 `dist/antigravity/` 下载 + 改两处（见第四节） |
 
 > 内存结论（2026-11-15 实测排查）：整套环境常驻开销 ~150MB 量级，**不是内存压力源**；实测明细见第六节。
 
@@ -107,10 +107,25 @@
 
 ---
 
-## 四、启动器完整源码
+## 四、启动器（直接下载或复制源码）
 
-> 复制以下全部内容，存为 `启动Antigravity.bat`（UTF-8 编码），与 `antigravity-hans.exe` 同目录。
-> **新设备必改两处**：第 6 行 `PROXY` 端口；第 8 行 `SLIDER` 路径（不装滑条可保持原样，自动跳过）。
+**方式 A · 直接下载（推荐）**：正本已入本仓库 `dist/antigravity/`，与家用机在用版本逐字节一致。
+
+| 文件 | 放置位置 |
+|---|---|
+| `启动Antigravity.bat` | 与 `antigravity-hans.exe` 同目录 |
+| `language-server.sha256` | 同上（bat 启动时的 512K 补丁检查依赖它；缺了只提示、不阻塞启动） |
+
+在公司机的目标文件夹里用 PowerShell 下载（浏览器直接开 URL 也行，中文文件名会自动编码）：
+
+```powershell
+Invoke-WebRequest "https://raw.githubusercontent.com/yuki-czf/dsh-base/main/dist/antigravity/%E5%90%AF%E5%8A%A8Antigravity.bat" -OutFile "启动Antigravity.bat"
+Invoke-WebRequest "https://raw.githubusercontent.com/yuki-czf/dsh-base/main/dist/antigravity/language-server.sha256" -OutFile "language-server.sha256"
+```
+
+**方式 B · 复制源码**：复制以下全部内容，存为 `启动Antigravity.bat`（UTF-8 无 BOM），与 `antigravity-hans.exe` 同目录；再新建单行文件 `language-server.sha256`，内容为第二节第 6 步里的「修补后 SHA256」。
+> **新设备必改两处**：第 5 行 `PROXY` 端口；第 8 行 `SLIDER` 路径（不装滑条可保持原样，自动跳过）。
+> 已知坑：`chcp 65001` 下把中文写进 bat 的 `if (...)` 括号块会被 cmd 解析器拆坏 → bat 块内只写 ASCII（下面源码已遵守）。
 
 ```bat
 @echo off
@@ -121,6 +136,27 @@ set "PROXY=http://127.0.0.1:7897"
 set "HANS=%~dp0antigravity-hans.exe"
 set "APP=%LOCALAPPDATA%\Programs\Antigravity\Antigravity.exe"
 set "SLIDER=G:\www\antigravity-lab\plugins\effort-slider\tools\inject-cdp.cjs"
+
+rem --- 512K context patch check (tools/context-autofix) ---
+set "LSBIN=%LOCALAPPDATA%\Programs\Antigravity\resources\bin\language_server.exe"
+set "LSHASHFILE=%~dp0language-server.sha256"
+set "LSHASH="
+if not exist "%LSHASHFILE%" goto LSNOFILE
+if not exist "%LSBIN%" goto LSNOFILE
+set /p LSEXPECTED=<"%LSHASHFILE%"
+for /f "skip=1 tokens=1 delims= " %%h in ('certutil -hashfile "%LSBIN%" SHA256') do if not defined LSHASH set "LSHASH=%%h"
+if /i "%LSHASH%"=="%LSEXPECTED%" goto LSOK
+echo [!] language_server.exe changed - 512K context patch likely lost after upgrade.
+echo     Re-patch: G:\www\antigravity-lab\tools\context-autofix\windows-fix-all.cmd
+echo     Check   : python G:\www\antigravity-lab\tools\context-autofix\scripts\fix_antigravity_context.py --status
+timeout /t 5 >nul
+goto LSPATCHDONE
+:LSOK
+echo [OK] Context patch intact (512K).
+goto LSPATCHDONE
+:LSNOFILE
+echo [!] Patch check skipped: language-server.sha256 or language_server.exe not found.
+:LSPATCHDONE
 
 netstat -ano | findstr /C:"127.0.0.1:7897" | findstr /C:"LISTENING" >nul 2>&1
 if errorlevel 1 goto NOPROXY
@@ -183,7 +219,7 @@ if not exist "%SLIDER%" (
 timeout /t 6 >nul
 node "%SLIDER%" >nul 2>&1
 if errorlevel 1 (
-    echo [!] Slider injection failed (app not ready or version changed). Skip.
+    echo [!] Slider injection failed ^(app not ready or version changed^). Skip.
 ) else (
     echo [OK] Effort slider injected. Open the model menu to use it.
 )
