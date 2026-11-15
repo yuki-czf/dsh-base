@@ -2,9 +2,23 @@
 
 > **用途**：在一台新 Windows 设备（如公司机）上，从零复现反重力桌面端的完整可用环境：代理启动 + 中文汉化 + 推理等级滑条。
 > **来源**：源仓库 `G:\www\antigravity-lab`（私有，家用机）。本文件是分发副本，改动请回源仓库同步，勿单边修改本副本。
-> **验证环境**：Windows 11 + Antigravity 2.32.1 + hans v0.4.10，2026-11-15 全链路实测通过。
+> **验证环境**：Windows 11 + Antigravity 2.32.1 + hans v0.4.10 + effort-slider v1.2.6 + 512K 上下文补丁，2026-11-15 全链路实测通过。
 > **本文件地址**（公司机直接访问）：
 > `https://raw.githubusercontent.com/yuki-czf/dsh-base/main/research/antigravity-install.md`
+
+---
+
+## 组件总览（当前家用机在用版本）
+
+| 组件 | 版本 | 形态 | 常驻内存 | 公司机动作 |
+|---|---|---|---|---|
+| Antigravity 桌面端 | 2.32.1 | Electron 应用 | 主进程 ~95MB + 渲染进程按窗口数 | 装默认路径 + 美区账号登录 |
+| antigravity-hans 汉化器 | v0.4.10 | 独立 exe（监视器黑窗） | 独立进程，几十 MB | 下载 + SHA256 校验 + 杀软信任区 |
+| effort-slider 滑条 | v1.2.6 | CDP 热注入 JS（免重启） | 渲染进程内几 MB | 克隆公开仓库 + Node ≥ 20 |
+| 512K 上下文补丁 | 上游 `267ab59a` | `language_server.exe` 二进制补丁 | 零常驻，大上下文会话时按需增长 | 拷 `tools/context-autofix` 目录 + Python 3 |
+| 启动器 bat | 2026-11-15b | 一次性脚本，跑完即退 | 无 | 复制 + 改代理端口/滑条路径 |
+
+> 内存结论（2026-11-15 实测排查）：整套环境常驻开销 ~150MB 量级，**不是内存压力源**；实测明细见第六节。
 
 ---
 
@@ -16,6 +30,7 @@
 | P2 | Node.js | ≥ 20（仅滑条注入需要） | 不装滑条可不装 Node。验证：`node -v` |
 | P3 | Google 账号 | **美区账号** | 国内区会触发地区限制锁死（历史教训：改美区后才登进）。账号邮箱勿写入任何文档 |
 | P4 | 杀软 | 若有火绒：先给目标文件夹加信任区 | 火绒会静默秒删未信任的 exe（实测过，无弹窗无日志） |
+| P5 | Python 3 | 仅 512K 补丁需要 | 不打补丁可不装。验证：`python --version` |
 
 **网络结论（实测）**：不需要 TUN 模式、不需要全局模式。Clash 只开「系统代理」（规则模式即可），启动器用环境变量把反重力的流量指向代理端口。
 
@@ -59,6 +74,24 @@
 2. 双击 `启动Antigravity.bat` 启动
 3. 应用内登录美区 Google 账号（一次即可，登录态存本地）
 
+### 6. 512K 上下文补丁（可选，本地上下文窗口 256K → 512K）
+
+**前提**：完全退出 Antigravity 再操作；装有 Python 3。
+
+- **脚本来源**：上游公开仓库 `https://github.com/TheAutomatic/antigravity-context-autofix` @ `267ab59a`（2026-11-14），家用机在 `antigravity-lab\tools\context-autofix\` 存了 vendored 全量副本。**注意 antigravity-lab 是家用机本地仓库、无 git 远端**——公司机要么从上游拉对应 commit，要么从家用机拷整个 `tools/context-autofix` 目录
+- 一键重打（交互菜单选 1）：`tools\context-autofix\windows-fix-all.cmd`
+- 它做什么：对 `%LOCALAPPDATA%\Programs\Antigravity\resources\bin\language_server.exe` 做 **9 处指令级等长替换**（文件大小不变，不碰 app.asar）——上下文压缩阈值 256,000 → 512,000 tokens，规则/单文件预算同步放大。原版自动备份到 `~/.gemini/agy-patches/`
+- 指纹（Antigravity 2.32.1 / lsVersion 2.32.1 / 构建 CL1021296516 / 215,547,392 B）：
+  - 原版 SHA256：`65cdb8d132fc61056625081be7d07d4d22f57eba485de7edf0d24d98e77c891f`
+  - 修补后 SHA256：`003ba968eb7e4dd805f5ae626700e9ad39179db51092523ff26855bc070500a5`
+- 验证：`python tools\context-autofix\scripts\fix_antigravity_context.py --status` → `ALREADY_PATCHED`，Budget 512,000
+- 恢复原版：同脚本 `--restore`
+
+**边界与运维**：
+- 只抬本地压缩阈值与规则预算，**不提高服务端能力**；非 1M 模型仍被安全裁剪回真实窗口
+- **反重力每次自动升级必冲掉补丁**（`resources\bin` 被整体替换）——启动器哈希告警会提示但不阻塞启动，重打即可；重打成功后必须同步更新两份 `language-server.sha256`（`antigravity-lab\launchers\` 与桌面「AI 工具」各一份）
+- 重打前先跑 `--status` 做结构匹配，匹配不过就停手等上游适配，不要硬打
+
 ---
 
 ## 三、验收清单（装完逐项打勾）
@@ -70,6 +103,7 @@
 | V3 | 无直连失败 | 同一日志搜 `dial tcp` 应为 0 条 |
 | V4 | 滑条（装了的话） | 打开模型菜单（点左下角模型名），底部出现「推理等级」滑条 |
 | V5 | hans 进程 | 任务管理器有 `antigravity-hans.exe`，其黑窗保持最小化 |
+| V6 | 补丁（打了的话） | 启动器显示 `[OK] Context patch intact (512K).`；或 `--status` 出 `ALREADY_PATCHED` + Budget 512,000 |
 
 ---
 
@@ -179,4 +213,22 @@ exit /b 0
 **已知坑**（源仓库 `.nodes` 里有完整档案）：
 1. 火绒静默秒删下载件（`%TEMP%` 也会被删）→ 只往信任区文件夹下载，下完立刻校验 SHA256
 2. `chcp 65001` 下把中文写进 bat 的 `if (...)` 括号块会被 cmd 解析器拆坏 → bat 块内只写 ASCII（上面源码已遵守）
-3. 反重力自动升级关不掉，每次升级需验证：汉化（重装 hans）/ 滑条（重跑注入）/ 启动器（通常无影响）
+3. 反重力自动升级关不掉，每次升级需验证：汉化（重装 hans）/ 滑条（重跑注入）/ 启动器（通常无影响）/ 补丁（重打 + 更新哈希文件）
+
+---
+
+## 六、资源开销实测（2026-11-15 家用机排查）
+
+16GB 机器全链路实测的内存画像：
+
+| 组件 | 实测开销 |
+|---|---|
+| Antigravity 主进程 | ~95MB（无窗口打开时仅存主进程） |
+| antigravity-hans 监视器 | 独立进程，几十 MB，随 bat 启停 |
+| effort-slider 注入体 | 渲染进程内几 MB（150KB 源码 + UI + 2 个 MutationObserver） |
+| 512K 补丁 | 零常驻；只在会话真用到大上下文时 language_server 按需增长 |
+| inject-cdp.cjs 注入器 | 跑完即退，不常驻 |
+
+**滑条代码审查结论**（v1.2.6）：无 `setInterval` 轮询；重复注入幂等（每次安装先 `stop()` 旧实例、观察器全部 `disconnect()`）；两个 MutationObserver 监听 `body` subtree，AI 流式输出时每次 DOM 变化触发一次 `scan()`——长回复期间有可感知的 CPU/GC 开销，但有界、不累积、不泄漏。
+
+**排查教训**（家用机 2026-11-15"内存疯狂上涨"误判）：实际元凶是 3D 游戏（单进程 7.8GB commit）+ 聊天/开发类 Electron 应用多渲染器积压（~2.5GB）+ 直播/微信叠加，把 16GB 物理内存压进页面文件抖动（硬页读取 3000+/秒）。反重力全家当时仅占 ~0.1GB。公司机如遇类似卡顿：先看任务管理器「已提交」总量与各进程 Commit 排序，别急着卸插件。
