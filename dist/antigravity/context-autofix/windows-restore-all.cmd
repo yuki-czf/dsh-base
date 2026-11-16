@@ -1,0 +1,21 @@
+@echo off
+setlocal
+chcp 65001 >nul
+set "PYTHONUTF8=1"
+set "PYTHONIOENCODING=utf-8"
+
+set "PY="
+if exist "C:\msys64\ucrt64\bin\python.exe" set "PY=C:\msys64\ucrt64\bin\python.exe"
+if not defined PY (
+    where python >nul 2>nul && set "PY=python"
+)
+if not defined PY (
+    echo [ERROR] Python 3 not found.
+    pause
+    exit /b 1
+)
+
+echo === Restoring Original Antigravity Backends ===
+"%PY%" "%~dp0scripts\fix_antigravity_context.py" --restore %*
+echo.
+pause

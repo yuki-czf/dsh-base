@@ -15,7 +15,8 @@
 | Antigravity 桌面端 | 2.32.1 | Electron 应用 | 主进程 ~95MB + 渲染进程按窗口数 | 装默认路径 + 美区账号登录 |
 | antigravity-hans 汉化器 | v0.4.10 | 独立 exe（监视器黑窗） | 独立进程，几十 MB | 下载 + SHA256 校验 + 杀软信任区 |
 | effort-slider 滑条 | v1.2.6 | CDP 热注入 JS（免重启） | 渲染进程内几 MB | 克隆公开仓库 + Node ≥ 20 |
-| 512K 上下文补丁 | 上游 `267ab59a` | `language_server.exe` 二进制补丁 | 零常驻，大上下文会话时按需增长 | 拷 `tools/context-autofix` 目录 + Python 3 |
+| 512K 上下文补丁 | 上游 `267ab59a` | `language_server.exe` 二进制补丁 | 零常驻，大上下文会话时按需增长 | 从 `dist/antigravity/context-autofix/` 取 + Python 3 |
+| agy-capsule 配额胶囊 | 上游 2026-11-14 版 | 原生 sidecar 插件（LS 托管）+ CDP 注入 UI | sidecar 进程，几十 MB | 从 `dist/antigravity/agy-capsule/` 复制进 plugins 目录（见 §7） |
 | 启动器 bat | 2026-11-15b | 一次性脚本，跑完即退 | 无 | 从 `dist/antigravity/` 下载 + 改两处（见第四节） |
 
 > 内存结论（2026-11-15 实测排查）：整套环境常驻开销 ~150MB 量级，**不是内存压力源**；实测明细见第六节。
@@ -78,7 +79,7 @@
 
 **前提**：完全退出 Antigravity 再操作；装有 Python 3。
 
-- **脚本来源**：上游公开仓库 `https://github.com/TheAutomatic/antigravity-context-autofix` @ `267ab59a`（2026-11-14），家用机在 `antigravity-lab\tools\context-autofix\` 存了 vendored 全量副本。**注意 antigravity-lab 是家用机本地仓库、无 git 远端**——公司机要么从上游拉对应 commit，要么从家用机拷整个 `tools/context-autofix` 目录
+- **脚本来源**：本仓库已带 vendored 正本 `dist/antigravity/context-autofix/`（上游 `TheAutomatic/antigravity-context-autofix` @ `267ab59a`，2026-11-14 版，家用机逐字节副本）——**公司机直接用这份**；上游仅作日后升级参考
 - 一键重打（交互菜单选 1）：`tools\context-autofix\windows-fix-all.cmd`
 - 它做什么：对 `%LOCALAPPDATA%\Programs\Antigravity\resources\bin\language_server.exe` 做 **9 处指令级等长替换**（文件大小不变，不碰 app.asar）——上下文压缩阈值 256,000 → 512,000 tokens，规则/单文件预算同步放大。原版自动备份到 `~/.gemini/agy-patches/`
 - 指纹（Antigravity 2.32.1 / lsVersion 2.32.1 / 构建 CL1021296516 / 215,547,392 B）：
@@ -92,6 +93,18 @@
 - **反重力每次自动升级必冲掉补丁**（`resources\bin` 被整体替换）——启动器哈希告警会提示但不阻塞启动，重打即可；重打成功后必须同步更新两份 `language-server.sha256`（`antigravity-lab\launchers\` 与桌面「AI 工具」各一份）
 - 重打前先跑 `--status` 做结构匹配，匹配不过就停手等上游适配，不要硬打
 
+### 7. agy-capsule 配额胶囊（可选，输入框实时显示上下文 + 配额）
+
+- **是什么**：输入框底栏双胶囊——会话上下文占比 + **5 小时/周配额剩余百分比**；悬停看 Token 构成（Turn0/Read/Think/Write）、缓存过期倒计时（3 分钟变黄 / 4 分钟变红）、多模型配额面板。官方只把配额藏在设置页，它钉在输入框边实时刷新
+- **上游**：`https://github.com/Lumidarin/agy-capsule`（MIT，2026-11-14 首发）；本仓库 `dist/antigravity/agy-capsule/` 存的是当日原版
+- **安装**（把下载的文件夹复制进官方插件目录，保持 `sidecars` 子目录结构）：
+  ```powershell
+  Copy-Item -Recurse ".\agy-capsule" "$env:USERPROFILE\.gemini\config\plugins\agy-capsule"
+  ```
+  然后重启 Antigravity。**无需点任何面板**：客户端自动识别新插件，约 1 分钟内写入 `~\.gemini\config\config.json` 完成注册；sidecar 进程由 language_server 托管拉起，用的是 **Antigravity 自带 node 运行时，不需要系统 Node**
+- **卸载**：删 `~\.gemini\config\plugins\agy-capsule` 文件夹重启客户端即净（config.json 会留一条无害注册记录）
+- ⚠️ **已知问题（上游 bug，原样入库未修）**：悬停配额弹窗每秒整体重建（视觉闪烁）+ 底栏布局约 126Hz 自激微抖；不影响数据正确性。根因与 10 行修法已留档（家用机 OpenChamber 会话 2026-11-15「调查GitHub仓库」），等上游修复或日后自行打补丁
+
 ---
 
 ## 三、验收清单（装完逐项打勾）
@@ -104,6 +117,7 @@
 | V4 | 滑条（装了的话） | 打开模型菜单（点左下角模型名），底部出现「推理等级」滑条 |
 | V5 | hans 进程 | 任务管理器有 `antigravity-hans.exe`，其黑窗保持最小化 |
 | V6 | 补丁（打了的话） | 启动器显示 `[OK] Context patch intact (512K).`；或 `--status` 出 `ALREADY_PATCHED` + Budget 512,000 |
+| V7 | 配额胶囊（装了的话） | 输入框底栏、模型选择器右侧出现双胶囊；新会话显示 `0% | 100% | 100%`（上下文/5h/周），配额为真实百分比 |
 
 ---
 

@@ -3,3 +3,5 @@
 *.bat -text
 *.cmd -text
 *.sha256 -text
+# antigravity 分发目录整体保真（含插件 mjs/脚本，下载即用）
+dist/antigravity/** -text

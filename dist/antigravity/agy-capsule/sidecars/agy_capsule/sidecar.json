@@ -1,0 +1,10 @@
+{
+  "command": "node",
+  "args": [
+    "server.mjs"
+  ],
+  "description": "Real-time context window and token usage monitor reading ground-truth API telemetry from local conversation databases",
+  "display_name": "agy-capsule",
+  "has_web_ui": false,
+  "restart_policy": "always"
+}
