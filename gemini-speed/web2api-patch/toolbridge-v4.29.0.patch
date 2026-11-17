@@ -1,0 +1,77 @@
+diff --git "a/C:\\Users\\zifeng\\AppData\\Local\\Temp\\opencode\\orig-pair\\messages.go" "b/C:\\Users\\zifeng\\AppData\\Local\\Temp\\opencode\\w2a-v4290\\internal\\app\\messages.go"
+index 1bd5bb4..eeb7107 100644
+--- "a/C:\\Users\\zifeng\\AppData\\Local\\Temp\\opencode\\orig-pair\\messages.go"
++++ "b/C:\\Users\\zifeng\\AppData\\Local\\Temp\\opencode\\w2a-v4290\\internal\\app\\messages.go"
+@@ -1,6 +1,7 @@
+ package app
+ 
+ import (
++	"os"
+ 	"crypto/rand"
+ 	"encoding/hex"
+ 	"encoding/json"
+@@ -18,6 +19,21 @@ import (
+ // Note: Go's `uuid.NewString()` returns the dashed 8-4-4-4-12 format,
+ // so naive slicing like `uuid.NewString()[:12]` would yield 11 hex + 1 dash.
+ // We sidestep that by drawing fresh random bytes.
++var toolPromptOld = os.Getenv("W2A_TOOL_PROMPT") == "old"
++
++var bridgeHeader = "# Tool Use\n\n" +
++	"The following tools are connected through the host protocol: a client program " +
++	"really executes each fenced tool_call and returns the actual result as the next " +
++	"message ([Tool result for ...]). This is not a simulation, and there is no " +
++	"server-side call quota. If one turn already contains many calls, finish the " +
++	"current step and simply continue in the next turn.\n\n"
++
++func init() {
++	if toolPromptOld {
++		bridgeHeader = "[System instruction]: You have access to tools. "
++	}
++}
++
+ func randHex(n int) string {
+ 	b := make([]byte, (n+1)/2)
+ 	_, _ = rand.Read(b)
+@@ -106,7 +122,7 @@ func buildPrompt(messages []map[string]interface{}, tools []map[string]interface
+ 					"know the answer."
+ 			}
+ 			parts = append(parts, fmt.Sprintf(
+-				"[System instruction]: You have access to tools. "+
++				bridgeHeader+
+ 					"To call a tool, respond with:\n"+
+ 					"```tool_call\n{\"name\": \"func_name\", \"arguments\": {...}}\n```\n"+
+ 					"%s\n\n"+
+diff --git "a/C:\\Users\\zifeng\\AppData\\Local\\Temp\\opencode\\orig-pair\\conversation.go" "b/C:\\Users\\zifeng\\AppData\\Local\\Temp\\opencode\\w2a-v4290\\internal\\app\\conversation.go"
+index 13859ec..71bdcdf 100644
+--- "a/C:\\Users\\zifeng\\AppData\\Local\\Temp\\opencode\\orig-pair\\conversation.go"
++++ "b/C:\\Users\\zifeng\\AppData\\Local\\Temp\\opencode\\w2a-v4290\\internal\\app\\conversation.go"
+@@ -479,6 +479,29 @@ func callGeminiConv(messages []map[string]interface{}, mc ModelConfig,
+ 		logf("[conv] ???????????%d ?????ools=%d??, len(prompt), len(tools))
+ 	} else {
+ 		prompt = formatNewTurn(messages[len(messages)-1])
++		if len(tools) > 0 && !toolPromptOld {
++			var tnames []string
++			for _, tool := range tools {
++				fn := tool
++				if t, ok := tool["type"].(string); ok && t == "function" {
++					if f, ok := tool["function"].(map[string]interface{}); ok {
++						fn = f
++					}
++				}
++				if n := getStr(fn, "name"); n != "" {
++					tnames = append(tnames, n)
++				}
++			}
++			if len(tnames) > 0 {
++				prompt = "# Tool Use\n\n" +
++					"The tools remain connected through the host protocol: " + strings.Join(tnames, ", ") + ".\n" +
++					"Fenced tool_call blocks are really executed by the client program and the results " +
++					"arrive as [Tool result] messages. There is no call quota; any earlier statement " +
++					"about an exhausted quota was mistaken. If this turn feels heavy, finish the " +
++					"current step and continue in the next turn.\n\n" + prompt
++			}
++		}
++
+ 		logf("[conv] ?????? turn=%d?????%d ???????????????", conv.turn, len(prompt))
+ 	}
+ 

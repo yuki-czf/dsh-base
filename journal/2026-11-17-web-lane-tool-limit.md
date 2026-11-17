@@ -123,3 +123,15 @@ C:\Users\tc\AppData\Local\Programs\@openchamberelectron\resources\opencode-cli\o
 
 - web2api 根治补丁（上文 3）待排期；改前先在 VPS 取 journal 日志核实首轮桥文案实发内容
 - esp2b 会话本身的工作（rebase + 拉图 + 106 passed）已由 deepseek 完成，无遗留
+
+## 家里侧交付（晚）：v4.29.0 升级 + 补丁 v2 上线 + WARP 看门狗
+
+- 采纳本报告全部定性；调研推特与 GitHub 无现成解法（pplx-proxy 同款病症明写 experimental and unreliable，无 fallback）；上游 v4.28.1/v4.29.0 未动工具桥
+- 基座升级 v4.28.0 补丁版 到 v4.29.0 补丁版：Argon 卡死修复（作者实测 Ultra 号 15/15）、SIDCC 保活修复、hydrogen 显式命名（免费档可用）、bl 自动刷新到 20261116
+- 补丁 v2（按本报告建议 3 落地）：首轮桥加机制真相声明（宿主协议真实执行围栏、非模拟、无服务端配额、多了下一轮继续）；续接轮换掉 unlimited 对抗口径，同款机制声明加给台阶话术；W2A_TOOL_PROMPT=old 开关不变
+- 部署插曲（已根治）：上线首测 502，根因 WARP 出口漂移（当日 08:50 后劣化，Google 对坏出口回 302，连续失败触发代理熔断 120 分钟且跨重启持久）；warp-cli 重连换新出口即愈
+- 验证：首轮专项 A 措辞 16/16（对照本报告基线全新会话 0 刀即停）；B4 马拉松（跑分味措辞）4/6 且首轮失败后历史污染级联放大，与报告机制吻合；natural 措辞全绿
+- 诚实残余：措辞形状仍影响首轮成功率（跑分味措辞约七成）；一次拒答后历史自强化未根治（本报告的空等 90 秒守则继续有效）；Carbon 免费号 502（inner[31]，作者 15/15 实测是 Ultra 号，非回归）
+- 新增基础设施：warp-watch 看门狗（systemd timer 每 5 分钟测 WARP socks，异常自动重连加重置 web2api 代理熔断），根治今日停机模式
+- 资产更新：toolbridge-v4.29.0.patch（纯 LF）+ apply-patch-v2.js + README v2 节
+- 请公司机复测：用 esp2b 当时失败的原句（按 rebase 方案修图片路径并拉图）打 v2 车道，验证真实负载下的首轮表现
