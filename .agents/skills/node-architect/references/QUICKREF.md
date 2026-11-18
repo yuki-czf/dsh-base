@@ -17,7 +17,7 @@ init-nodes.ps1 [-Project <项目根>]
 等价自然语言：「你使用存档skill，扫描空闲节点，并将计划存档为一个计划节点」。PI-Desktop 聊天框对 `/` 开头消息原生展开 `.pi/prompts/` 模板（$ARGUMENTS/$@/$1 占位）；DSH 等无斜杠命令的端直接说「登记计划节点 <名>」，走同一流程（命令模板全文：`commands/plan-node.md`）。流程五步：
 
 ```
-0. 守卫：.agents/skills/node-architect/ 或 .nodes/ 不存在 -> 先 init（或说"装节点协议"）
+0. 定位：跑 save.ps1 locate（或直读 CONTEXT.md；点目录禁 glob/grep），仅 exit 2 才先 init
 1. 读档：读 CONTEXT.md + PROGRESS.md（只读）
 2. 取号：save.ps1 next-node -Node <短名> [-Accept <验收>] -Session <会话>
 3. 冲突校验：见下表，任何 FAIL 分支即停、不写档案
@@ -69,10 +69,24 @@ init-nodes.ps1 [-Project <项目根>]
 - **处置**：① 同会话补一句「继续」即续上（档案未损，断点仍在）② 复发换思考档/强模型 ③ 不原样重发同一句（大概率复现）。
 - **通用规则**：任何异常终止都是断点场景——进度在档案不在对话，下次开工照常读档恢复。
 
+## 定位 `.nodes`（点目录禁 glob/grep）
+
+opencode 等工具的 `glob`/`grep` 默认跳过 `.nodes`/`.agents` 点目录，`No files found` 不等于未安装。探测是否已装节点协议只用两种方式：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .agents/skills/node-architect/scripts/save.ps1 locate [-Project <路径>]
+# 或跨平台：node .agents/skills/node-architect/scripts/save.mjs locate [--project <路径>]
+# 或直接调用 read 工具读取 .nodes/CONTEXT.md
+```
+
+- **exit 0**：命中 `.nodes`，输出 `PROJECT=` 与 `NODES=` 路径（支持从子目录向上查找）。
+- **exit 2**：未找到 `.nodes`（遇到 `.git` 根即停搜，防误命中父级仓库）。仅此状态才判定未安装。
+
 ## 存档脚本 save.ps1
 
 | 命令 | 用途 |
 |------|------|
+| `save.ps1 locate [-Project <路径>]` | 向上定位 `.nodes`（遇 `.git` 或盘符根即停）：命中 exit 0；未找到 exit 2 |
 | `save.ps1 lock -Session <会话>` | 写 CONTEXT.md 前取锁 |
 | `save.ps1 unlock -Session <会话>` | 写完 CONTEXT.md 后放锁 |
 | `save.ps1 checkpoint -Node <节点> -Session <会话> [-Recon "..."] [-Note "..."]` | 轻量检查点：往 SESSIONS 追加一行（不动 CONTEXT 不加锁）；`-Recon` 登记开工侦察 |
@@ -105,6 +119,7 @@ init-nodes.ps1 [-Project <项目根>]
 |----|------|
 | 0 | 成功 / 校验全过 |
 | 1 | 失败（锁竞争 / 校验未过） |
+| 2 | 未安装（`locate` 未找到 `.nodes`） |
 | 3 | 告警（墓碑检查发现疑似断链；review-audit 发现超期待验收节点） |
 | 4 | 体积闸门拦截（核心档案超硬上限；按提示 trim 后重跑，10 分钟内重跑同命令自动放行——**finish 的预检拦截除外，无放行机制，必须 trim 后重跑**） |
 

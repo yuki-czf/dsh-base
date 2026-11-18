@@ -1,6 +1,6 @@
 # .nodes 节点协议（客户端无关版）
 
-> node-architect v1.13.4 · 本文件是协议规则的**唯一真源**；SKILL.md 与 AGENTS.md 中的条款为摘要，如有分歧以本文件为准。
+> node-architect v1.13.5 · 本文件是协议规则的**唯一真源**；SKILL.md 与 AGENTS.md 中的条款为摘要，如有分歧以本文件为准。
 > 核心理念：**文件是记忆，对话不是**。上下文压缩不可避免，唯一可靠的记忆是磁盘上的档案。
 
 ## 目录
@@ -19,6 +19,7 @@
 
 ## 开工协议
 
+0. **定位档案根**：跑 `.agents/skills/node-architect/scripts/save.ps1 locate`（或直读 `.nodes/CONTEXT.md`）；禁止用 `glob`/`grep` 探测点目录并因 `No files found` 误判未安装，仅 `locate` 退出码 2 才判未装。
 1. 读 `CONTEXT.md` + `PROGRESS.md`（必要时读 `DECISIONS.md` 最近条目）。
 2. 用一两句话向用户复述"当前节点 / 下一步"，确认后再动手。
 

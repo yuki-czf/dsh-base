@@ -8,3 +8,5 @@
 - **暂停点**：节点 #2（dsh-mcp skill 纪律层）待启动；cursor/zed/claude 三端真机回归未做
 - **未决问题**：正式一行式验证 pending（CDN 缓存 ~5min）；多客户端并发 SSH 留候选节点
 - **最后动作**：2026-08-22 推送 c1b48e5+1f48925；云端冒烟发现 BOM 毒化 irm|iex（已修，API 通道全功能验证通过）；补记供应链锁文件（master package-lock + installer 拷贝）
+- [checkpoint 2026-11-18T11:10:21] node=dotdir-locate-fix - note=登记 #37 dotdir-locate-fix（待开始，暂不执行）：opencode v2 glob/grep 默认跳过点目录→存档 skill 探测 .nodes 假阴性；根因三连探针与七处修复方案已落 plans/dotdir-locate-fix.md
+- [finish 2026-11-18T11:50:44] node=dotdir-locate-fix status=✅已完成 - 侦察=核实skill与rg机制及skill-compact截断；母版五处改法+sync-skills 29项基线确认 - note=v1.13.5 五处落地；独立复审由 locate 四态实测+verify+sync-skills 29/29 替代；产出 node-architect-v1.13.5.zip

@@ -1,5 +1,5 @@
 # AGENTS
-## 节点协议（node-architect v1.13.4）
+## 节点协议（node-architect v1.13.5）
 
 本项目使用 `.nodes` 节点存档协议对抗上下文压缩（摘要；规则全文以 `.nodes/PROTOCOL.md` 为准）。任何 AI 客户端会话必须遵守：
 
@@ -15,3 +15,5 @@
 
 规则正文已抽成**全局 skill**（对所有项目生效，不再依赖本文件）：`~/.agents/skills/pi-tool-discipline/`（内含体检脚本 `analyze.mjs` 与基线 `baseline-2026-10-16.txt`）。
 本仓库留档：实测数据与工作副本 `pi-gemini-tuning/`（2026-10-16 基线）。此节不再重复规则原文，避免与 skill 双源漂移。
+
+<!-- 执行节奏规则已迁到用户全局：`E:\.dsh\AGENTS.md`（对所有项目生效，避免每个项目重复一份）。 -->

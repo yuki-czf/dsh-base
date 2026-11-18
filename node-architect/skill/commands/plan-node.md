@@ -11,7 +11,7 @@ argument-hint: <计划短名> [一句验收标准]
 
 ## 执行流程
 
-**第 0 步（自愈守卫，依赖检查）**：若 `.agents/skills/node-architect/` 或 `.nodes/` 不存在，说明当前项目未安装节点协议——先运行 `.agents/skills/node-architect/scripts/init-nodes.ps1`（脚本不存在则提示用户说「装节点协议」引导安装），装好后回到第 1 步。本命令依赖存档 skill（node-architect），两者随同一安装包同版本分发，不单独存在。
+**第 0 步（落点与依赖定位，禁 glob/grep）**：直接运行 `powershell -ExecutionPolicy Bypass -File .agents/skills/node-architect/scripts/save.ps1 locate`（无 PowerShell 用 `node .agents/skills/node-architect/scripts/save.mjs locate`）或直读 `.nodes/CONTEXT.md`。`.nodes`/`.agents` 点目录对 `glob`/`grep` 默认不可见，禁止据此判无；仅 `locate` 返回退出码 2 时才说明当前项目未安装 `.nodes/`——此时运行 `.agents/skills/node-architect/scripts/init-nodes.ps1`（脚本不存在再提示用户说「装节点协议」引导安装），装好后回到第 1 步。本命令依赖存档 skill（node-architect），两者随同一安装包同版本分发，不单独存在。
 
 1. **读档**：读 `.nodes/CONTEXT.md` 与 `.nodes/PROGRESS.md`，确认当前节点状态（只读，不修改）。
 2. **原子取号**：从 `$ARGUMENTS` 提取「计划短名」（无空格、无斜杠，如 `dsh-plan-popup`）与可选的「一句验收标准」，运行：

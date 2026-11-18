@@ -118,3 +118,31 @@
 - **修复（BOM）**：编辑 `.ps1` 会丢 UTF-8 BOM，PS5.1 解析 CJK 即崩；`sync-skills.ps1` 增 4 副本「BOM+ParseFile 零错误」断言（25 checks）——哈希一致不代表可执行。
 - **试点结果**：批 1 双棒真并行 22.6min vs 串行外推 40m57s（省 44.8%）；五判据全过；模型分档不变。
 - **遗留**：workflow 子会话不落 projcache（每棒 TTFT/pressure 不可机读）；host 取消 workflow 的 `agent/disposed TypeError` 上报；pi-tempo DSH 方言副本需经装配链升版。
+
+## [2026-10-20] pi-tempo DSH 方言副本升 v1.0.12：真源外置 + 装配链（结清 #32/#33 遗留第 1 项）
+
+- **查清的真源链（与旧判断不同）**：`sync-skills.ps1:53/56/63-64` 的 `$ptSkill`=`pi-tempo\skill` → `$gSkill`=`%USERPROFILE%\.agents\skills\pi-tempo` 是**母版直拷**，实测已 v1.0.12 且与母版同哈希（`c6c3f15…`）；项目内 `.agents\skills\pi-tempo\SKILL.md` **不在任何 sync 目标里**，它是节点 #16 A1 的手工方言改写产物（底稿=母版 v1.0.10 raw；§1/§2/§3/§7/§8 改写 + §10 派发原语映射），文件内无 `version:` 字段。故「dsh-base 与 C:\Users\tc 两份同文」是旧 scout 误记：**用户级=母版血统，项目级=方言血统**，混为一谈才会以为跑 sync 即可对齐（v1.0.11 收口时正因误拷母版到该项目位而回滚，见 relay/v1.0.11-doc-fix/facts.md:34）。
+- **决定**：方言升版**不动母版语义、不手改部署位**。①方言真源外置为 `pi-tempo/dialect-dsh/SKILL.md`，头注 `based-on-master: 1.0.12` 声明对齐版本；②`sync-skills.ps1` 增 2b 装配步（源→`.agents\skills\pi-tempo\SKILL.md`）+ 4 断言（源存在／部署=源哈希／based-on==母版版本／`workflow.parallel` 在位），总检查 25→29；③部署位自此为**产物**，禁手改。
+- **迁移内容**（母版 v1.0.10→v1.0.12 的四处语义增量，全部方言化保留）：frontmatter 加 ⑪批级循环／⑫并行原语（并修正「含十节」→「含十二节」）；§10「派完不空等」双模板指路 `/dsh-run` | `/node-run`；复审锚定 REQ-H1（每处改动附 `文件路径:行号`）／REQ-H2（锚点抽检 ≥3）＋「阻断项须附原文、调度器先 grep 复核」；§10 并行批补「批级循环（v1.0.11）」与「并行原语实测校正（v1.0.12）」；回报要求加行号锚定。方言面（DSH 写工具契约/timeoutMs/exit code/工具名/无按调用档位/DSH 原语）**零删改**。
+- **实测**：`-CheckOnly` 先红（仅「部署≠源」1 项 FAIL，其余 28 绿）→ 装配 → **29/29 全绿**；部署哈希 `7317074…`==方言源；母版哈希未变；DSH 热重载即时生效（本会话技能目录描述当场变为「含十二节＋⑪⑫」）。
+- **顺带校正**：`.dsh/skills/dsh-run.md:6`（与 `E:\.dsh\skills\dsh-run.md` 同文）头注本就写 `pi-tempo v1.0.12 DSH 方言`，此前是「超前声明」，现与实际一致，**无需改动**。
+- **遗留**：`sync-skills.ps1` 本体仍无 BOM（现有内容 ASCII-only，PS5.1 可解析）；若未来新增断言含 CJK，必须先补 BOM 再用 ParseFile 验。
+
+## [2026-11-02] pi-tempo 看门狗下线（用户拍板：不再使用 pi-tempo）
+
+- **删除**：计划任务 `\pi-tempo-watchdog-keepalive`（每 5 分钟拉 start.ps1）、Startup 快捷方式 `pi-tempo-watchdog.lnk`（→ wscript start-on-boot.vbs 隐藏窗口拉 PowerShell）、常驻 wrapper（pid 37412，已死，run.log 止于 2026-11-02 13:53:45）+ PID 文件。验证：任务与 lnk 查询均"不存在"。
+- **保留**：`pi-tempo/watchdog/` 源码仍在仓库；`~/.pi-desktop/logs/` 历史日志保留；node 子进程是否有孤儿残留未最终确认（查进程命令两次被权限层拒），重启即净且无自启不会再回来。
+- **给后续会话**：节点 #24/归档里「开工先跑 start.ps1」口径**作废**——用户已明确不再使用 pi-tempo，勿重装看门狗、勿再注册自启。`m2a-tray.lnk`（→ `E:\www\m2a-company-deploy\m2a-tray.exe`）与本决策无关，未动。
+
+## 2026-11-02 #36 spec-superflow 钉 0.8.16＋v2 并行试点三件落位
+
+- **背景**：prometheus-spec 的核心工作流来自 npm 包 spec-superflow（上游 MageByte-Zero/spec-superflow）。调研发现上游已从本机 0.8.16（07-07）走到 2.1.0（10-26）：v2.0.0 重写为「一条龙」——入口收敛 direct/planned 两路、默认工件从五件套减为 proposal+tasks 两件（specs/design 可选、execution-contract 不再手写）、执行默认当前会话（规划者＝执行者）、SDD 委派/子代理/worktree 全部改为显式选择，与本仓 prometheus-spec「只出计划不动手」的分离架构方向相反。
+- **决定（用户拍板）**：不升级、并行试点。①全局 npm 钉 0.8.16——`opencode.json` 的 `plugins[0]` 指向全局 node_modules 里的插件文件，升全局包＝直接改旧线；②v2 落沙箱：`E:\tools\spec-superflow-v2`（npm pack 解压 2.1.0）＋`E:\www\ssf-v2-lab` 试点仓（skills 复制进 `.agents/skills`，OpenCode 项目级裸名加载，与旧插件 `spec-superflow:` 命名空间不撞车）＋`~/.config/opencode/agents/superflow-v2.md`（一条龙 agent，权限语法照抄 prometheus-spec.md 已验证格式）；③试点 CLI 一律 `npx -y spec-superflow@2.1.0`，禁用全局 ssf。
+- **给后续会话**：勿 `npm i -g spec-superflow`（会顶掉 0.8.16）；prometheus-spec 五件套仍是本仓自己的标准，与上游 v2 默认无关（协议 #8④ Execution Topology 节载体不受影响）；试点产出（`changes/*/pilot-notes.md`）出来后再评估是否吸收 v2 机制（评审锚点／isolate+finish）。
+- **实施记录**：cap 门禁首跑拦下（#36 行 678 字符、#35 旧账 768）→ 本行压缩至 519＋`trim-progress -Apply` 归档 #35 原行（`archive/progress-rows-2026-11-02.md`）；git 未提交（工作区有其他会话大量未提交改动，留用户统一处理）。
+
+## [2026-11-18] #37 dotdir-locate-fix：纯 skill 方案与点目录探测根因
+
+- **根因实证**：OpenCode V2 中 `glob`/`grep` 默认跳过点目录（`.nodes`/`.agents` 均返 `No files found`，`read`/shell 不受影响）；加上原 `commands/plan-node.md:14`「若 `.nodes/` 不存在则初始化」未规定探测工具，诱发 agent 误判未装协议。
+- **方案裁决（纯 skill，不碰项目/全局 AGENTS.md，不用 `.ignore`）**：① 实测 `.ignore`（`!.nodes/`、`!.agents/`）虽可让 `rg` 搜出隐藏目录，但会把 `.agents/backup/`（本仓含 27 份 `save.ps1` 备份）与 `.nodes/archive/` 暴露给全局代码搜索并污染上下文，且属项目根新增文件，故否决；② 改用「`SKILL.md` `description` 首句（56 字，兼容 `skill-compact.js` 80 字首句截断）提示禁 `glob` 直读/`locate` ＋ 命令/协议第 0 步固定跑 `save.ps1 locate`（将禁令转为动作步骤，匹配 #25/#27/#28 实测纪律）」；③ `locate` 上溯遇 `.git`（含 worktree 文件）即停搜并 `exit 2`，防止越仓误命中父目录无关 `.nodes`。
+- **拆出项**：`SKILL-FULL.md` 孤儿清理与 `init-nodes` 老项目指针正文迁移不绑入本节点。

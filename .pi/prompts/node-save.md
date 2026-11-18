@@ -9,7 +9,7 @@ argument-hint: <节点名> [状态短语]
 
 ## 执行流程
 
-**第 0 步（路径纪律）**：所有脚本路径照抄本模板，禁止用 Glob/Grep 搜索定位（`.agents`/`.pi` 点目录对搜索工具不可见，搜了必空转）。
+**第 0 步（落点与路径纪律，禁 glob/grep）**：先运行 `powershell -ExecutionPolicy Bypass -File .agents/skills/node-architect/scripts/save.ps1 locate`（无 PowerShell 用 `node .agents/skills/node-architect/scripts/save.mjs locate`）或直读 `.nodes/CONTEXT.md` 确认档案根（仅退出码 2 判未安装）；所有脚本路径照抄本模板，禁止用 Glob/Grep 探测或搜索 `.nodes`/`.agents`/`.pi` 点目录。
 
 1. **读档确认**：读 `.nodes/PROGRESS.md` 确认目标节点行存在、名字唯一（finish 按节点名唯一匹配，零/多命中会 fail）。
 2. **门禁（本批有代码改动时必跑）**：跑项目的合并门禁命令（本项目为根目录 `scripts/gate.ps1`，参数见项目 AGENTS.md；无门禁脚本的项目按项目测试纪律逐项跑）。exit 0 才继续。

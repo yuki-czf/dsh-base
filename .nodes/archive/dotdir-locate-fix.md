@@ -1,0 +1,21 @@
+# 节点归档：dotdir-locate-fix
+
+- **周期**：2026-11-18 → 2026-11-18
+- **验收结果**：
+  - ① 根因与纯 skill 定案已写入 `.nodes/DECISIONS.md`（不改全局/项目 `AGENTS.md`，否决 `.ignore` 防备份/归档污染全局检索）。
+  - ② 母版 `node-architect/skill/` 升至 `v1.13.5` 并完成五处改动：`SKILL.md`（`description` 首句 56 字含禁 `glob` 直读/`locate`、`whenToUse` 提示、铁律 0 含 Plan 模式豁免、效率条款与初始化引导）、`commands/plan-node.md` 与 `node-save.md` 第 0 步改为 `locate`/直读、`references/PROTOCOL.md` 开工协议第 0 步（全文件 103 行 ≤150 红线）、`references/QUICKREF.md` 新增定位节与退出码 `2`、`scripts/save.ps1` + `save.mjs` 新增 `locate` 动作（插在 `nodesDir` 校验前，遇 `.git` 即停，保留 `save.ps1` UTF-8 BOM）。
+  - ③ 实测通过：`save.ps1` 与 `save.mjs` 均通过项目根（exit 0）、子目录向上命中（exit 0）、空目录（exit 2）、`.git` 截断防越仓（exit 2）以及 `verify` 不回归；`node --check` exit 0。
+  - ④ 双母版维护收口：`sync-skills.ps1` 部署并校验 `29 check(s), 0 failure(s)`；`pack.ps1` 产出 `node-architect/dist/node-architect-v1.13.5.zip`（78.6 KB）及 `.sha256`。
+- **改动了什么**：
+  - `node-architect/skill/SKILL.md`：升版 `1.13.5`，新增铁律 0 与 `description` 首句防 `glob` 误判提示。
+  - `node-architect/skill/commands/plan-node.md`、`node-save.md`：第 0 步改为 `save.ps1 locate` / 直读 `.nodes/CONTEXT.md`，仅退出码 2 判未装。
+  - `node-architect/skill/references/PROTOCOL.md`、`QUICKREF.md`：补开工第 0 步、定位节与退出码 2。
+  - `node-architect/skill/scripts/save.ps1`、`save.mjs`：新增 `locate` 动作（`.git` 边界截断），保持双端行为一致与 `save.ps1` BOM。
+  - `node-architect/dist/node-architect-v1.13.5.zip`（含 `.sha256`）及三仓同步部署。
+- **踩坑记录**：
+  - `save.mjs` 原代码把 `if (!existsSync(nodesDir))` 放在 `VALID_ACTIONS` 检查之前，新增 `locate` 时必须先校验动作再分流，否则未装目录运行 `locate` 会直接以 exit 1 退出。
+  - `.ignore`（`!.nodes/`、`!.agents/`）虽能让 `rg` 搜到点目录，但会顺带把 `.agents/backup/`（本仓 27 份历史脚本备份）暴露给全局代码搜索，不适合作为通用 skill 方案。
+- **执行效率复盘**：预估单批自干 ~30min，实际一次完成改写方案、修改母版 7 文件、10 项对比实测与打包同步，无返工；最大耗时点在于先核实 OpenCode/ripgrep 真实机制与 `skill-compact.js` 首句截断行为，避免了盲目按原方案改动项目 `AGENTS.md` 和写 `.ignore`。可复用结论：skill 入口第一句与命令第 0 步直接决定冷启动行为，改「禁令」为「第 0 步固定动作」更稳。
+- **委派复盘**：执行槽按登记自干（母版协议文本与小脚本改动，单批完成）；收口槽按登记由 `save.ps1`/`save.mjs` `locate` 四态 + `verify` + `sync-skills` 29/29 实测替代独立复审。
+- **遗留**：`SKILL-FULL.md`（v1.3.3 孤儿文件）清理与 `init-nodes.ps1` 老项目指针迁移未并入本节点，按需另开小节点；OpenCode V2 真实会话内 `description` 首句拦截冷启动 `glob` 的长效表现待日常使用观察；工作区未提交/未推送（留用户统一处理）。
+- **给下个节点的衔接说明**：后续节点若需判断项目是否启用节点协议，统一调用 `save.ps1 locate`（或 `save.mjs locate`）并以 exit 2 作为未安装判据；跨仓库复用或二次分发直接引用 `node-architect/dist/node-architect-v1.13.5.zip`。

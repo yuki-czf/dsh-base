@@ -19,6 +19,7 @@
 
 ## 开工协议
 
+0. **定位档案根**：跑 `.agents/skills/node-architect/scripts/save.ps1 locate`（或直读 `.nodes/CONTEXT.md`）；禁止用 `glob`/`grep` 探测点目录并因 `No files found` 误判未安装，仅 `locate` 退出码 2 才判未装。
 1. 读 `CONTEXT.md` + `PROGRESS.md`（必要时读 `DECISIONS.md` 最近条目）。
 2. 用一两句话向用户复述"当前节点 / 下一步"，确认后再动手。
 

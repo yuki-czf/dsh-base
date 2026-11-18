@@ -4,6 +4,7 @@
   .nodes 存档流程的机械动作：CONTEXT 写锁管理 + 存档完整性校验 + 一键存档/原子收口。
   模型只负责生成内容；加锁/删锁/超时判断/校验/归档骨架生成交给本脚本。
 .EXAMPLE
+  save.ps1 locate [-Project <path>]
   save.ps1 lock   -Session main
   save.ps1 unlock -Session main
   save.ps1 save   -Node 跑通登录流程 -Session main -ContextFile ctx-tmp.md [-Completed]
@@ -25,7 +26,7 @@
 #>
 param(
   [Parameter(Mandatory = $true, Position = 0)]
-  [ValidateSet('lock', 'unlock', 'verify', 'verify-batch', 'commit', 'save', 'finish', 'checkpoint', 'review-audit', 'check-tombstone', 'trim-decisions', 'trim-context', 'trim-progress', 'next-node')]
+  [ValidateSet('locate', 'lock', 'unlock', 'verify', 'verify-batch', 'commit', 'save', 'finish', 'checkpoint', 'review-audit', 'check-tombstone', 'trim-decisions', 'trim-context', 'trim-progress', 'next-node')]
   [string]$Action,
   [string]$Project = (Get-Location).Path,
   [string]$Session = 'main',
@@ -57,6 +58,23 @@ try {
 } catch { }
 
 $Project  = (Resolve-Path $Project).Path
+if ($Action -eq 'locate') {
+  $cur = $Project
+  while ($cur) {
+    $cand = Join-Path $cur '.nodes'
+    if (Test-Path -LiteralPath $cand -PathType Container) {
+      Write-Output "PROJECT=$cur"
+      Write-Output "NODES=$cand"
+      exit 0
+    }
+    if (Test-Path -LiteralPath (Join-Path $cur '.git')) { break }
+    $parent = Split-Path -Parent $cur
+    if (-not $parent -or $parent -eq $cur) { break }
+    $cur = $parent
+  }
+  Write-Output "NOT_FOUND: .nodes (searched from $Project)"
+  exit 2
+}
 $nodesDir = Join-Path $Project '.nodes'
 if (-not (Test-Path $nodesDir)) { throw "Not found: $nodesDir (run init-nodes.ps1 first)" }
 if ($Session -match '[|\\/:*?"<>|\r\n]') { throw "Session id contains illegal chars: $Session" }

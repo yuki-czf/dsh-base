@@ -3,6 +3,7 @@
  * save.mjs — Cross-platform (Node.js) equivalent of save.ps1
  *
  * Usage:
+ *   node save.mjs locate [--project <path>]
  *   node save.mjs lock   --session main
  *   node save.mjs unlock --session main
  *   node save.mjs save   --node "Run login flow" --session main --context-file ctx-tmp.md [--completed]
@@ -24,7 +25,7 @@
  */
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync, unlinkSync, readdirSync, statSync, rmSync } from 'node:fs';
-import { join, resolve, isAbsolute } from 'node:path';
+import { join, resolve, isAbsolute, dirname } from 'node:path';
 
 // ---------- Arg parsing ----------
 const args = process.argv.slice(2);
@@ -51,13 +52,31 @@ const oldLockPath = join(nodesDir, '.lock');
 const TIMEOUT_MIN = 10;
 
 // ---------- Validation ----------
-if (!existsSync(nodesDir)) { console.error(`Not found: ${nodesDir} (run init-nodes first)`); process.exit(1); }
-
-const VALID_ACTIONS = ['lock', 'unlock', 'verify', 'verify-batch', 'commit', 'save', 'finish', 'checkpoint', 'review-audit', 'check-tombstone', 'trim-decisions', 'trim-context', 'trim-progress', 'next-node'];
+const VALID_ACTIONS = ['locate', 'lock', 'unlock', 'verify', 'verify-batch', 'commit', 'save', 'finish', 'checkpoint', 'review-audit', 'check-tombstone', 'trim-decisions', 'trim-context', 'trim-progress', 'next-node'];
 if (!VALID_ACTIONS.includes(action)) {
   console.error(`Usage: node save.mjs <${VALID_ACTIONS.join('|')}> [options]`);
   process.exit(1);
 }
+
+if (action === 'locate') {
+  let cur = project;
+  while (cur) {
+    const cand = join(cur, '.nodes');
+    if (existsSync(cand) && statSync(cand).isDirectory()) {
+      console.log(`PROJECT=${cur}`);
+      console.log(`NODES=${cand}`);
+      process.exit(0);
+    }
+    if (existsSync(join(cur, '.git'))) break;
+    const parent = dirname(cur);
+    if (!parent || parent === cur) break;
+    cur = parent;
+  }
+  console.log(`NOT_FOUND: .nodes (searched from ${project})`);
+  process.exit(2);
+}
+
+if (!existsSync(nodesDir)) { console.error(`Not found: ${nodesDir} (run init-nodes first)`); process.exit(1); }
 
 // v1.7.0 cap knobs
 const apply = hasFlag('apply');
