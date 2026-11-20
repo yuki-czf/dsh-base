@@ -49,17 +49,57 @@ function readSecret(secretsDir, name) {
   return val.length ? val : undefined;
 }
 
+function findPemKey(secretsDir) {
+  const credNames = new Set(['ssh_host', 'ssh_user', 'ssh_port', 'ssh_password', 'ssh_key_path', 'README.txt', 'README.md']);
+  let entries;
+  try {
+    entries = fs.readdirSync(secretsDir);
+  } catch (err) {
+    // Surface the reason instead of silently returning "no key".
+    log(`cannot read credential directory (${err.code || err.message})`);
+    return undefined;
+  }
+  for (const f of entries) {
+    if (f.startsWith('.resolved-') || credNames.has(f)) continue;
+    const p = path.join(secretsDir, f);
+    let st;
+    try { st = fs.statSync(p); } catch { continue; }
+    if (!st.isFile() || st.size < 100) continue;
+    let head;
+    try { head = fs.readFileSync(p, 'utf8').slice(0, 64); } catch (err) {
+      log(`cannot read a candidate key file (${err.code || err.message})`);
+      continue;
+    }
+    if (/-----BEGIN [A-Z ]*PRIVATE KEY-----/.test(head)) return p;
+  }
+  return undefined;
+}
+
 function loadConfig(secretsDir) {
   const host = readSecret(secretsDir, 'ssh_host');
   const username = readSecret(secretsDir, 'ssh_user');
   const password = readSecret(secretsDir, 'ssh_password');
-  const keyPath = readSecret(secretsDir, 'ssh_key_path');
+  const rawKeyPath = readSecret(secretsDir, 'ssh_key_path');
   const port = parseInt(readSecret(secretsDir, 'ssh_port') || '22', 10);
 
   if (!host) die(`missing ${path.join(secretsDir, 'ssh_host')} (see mcps/ssh-runner/secrets-template/)`);
   if (!username) die(`missing ${path.join(secretsDir, 'ssh_user')}`);
-  if (!password && !keyPath) die(`need ${path.join(secretsDir, 'ssh_password')} or ssh_key_path (key auth preferred)`);
+  if (!password && !rawKeyPath) die(`need ${path.join(secretsDir, 'ssh_password')} or ssh_key_path (key auth preferred)`);
   if (Number.isNaN(port) || port <= 0) die(`invalid ssh_port value: ${port}`);
+
+  // Resolve the private key without leaking file names: relative values resolve
+  // against .secrets/ (the module's default layout). If the named file is not
+  // there, fall back to the first file in .secrets/ whose content is a PEM key.
+  let keyPath;
+  if (rawKeyPath) {
+    const candidate = path.isAbsolute(rawKeyPath) ? rawKeyPath : path.resolve(secretsDir, rawKeyPath);
+    if (fs.existsSync(candidate)) {
+      keyPath = candidate;
+    } else {
+      keyPath = findPemKey(secretsDir);
+      if (!keyPath) die('ssh_key_path points to a missing file and no PEM private key was found in .secrets/');
+    }
+  }
 
   const config = { name: 'default', host, port, username };
   if (keyPath) config.privateKey = keyPath;
