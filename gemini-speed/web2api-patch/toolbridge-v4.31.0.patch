@@ -1,4 +1,4 @@
-diff --git "a/C:\\Users\\zifeng\\AppData\\Local\\Temp\\opencode\\orig-4310\\messages.go" "b/C:\\Users\\zifeng\\AppData\\Local\\Temp\\opencode\\v4310-src\\internal\\app\\messages.go"
+﻿diff --git "a/C:\\Users\\zifeng\\AppData\\Local\\Temp\\opencode\\orig-4310\\messages.go" "b/C:\\Users\\zifeng\\AppData\\Local\\Temp\\opencode\\v4310-src\\internal\\app\\messages.go"
 index 1bd5bb4..17423d4 100644
 --- "a/C:\\Users\\zifeng\\AppData\\Local\\Temp\\opencode\\orig-4310\\messages.go"
 +++ "b/C:\\Users\\zifeng\\AppData\\Local\\Temp\\opencode\\v4310-src\\internal\\app\\messages.go"
@@ -48,7 +48,7 @@ index 13859ec..2959ba8 100644
 --- "a/C:\\Users\\zifeng\\AppData\\Local\\Temp\\opencode\\orig-4310\\conversation.go"
 +++ "b/C:\\Users\\zifeng\\AppData\\Local\\Temp\\opencode\\v4310-src\\internal\\app\\conversation.go"
 @@ -479,6 +479,30 @@ func callGeminiConv(messages []map[string]interface{}, mc ModelConfig,
- 		logf("[conv] ???????????%d ?????ools=%d??, len(prompt), len(tools))
+ 		logf("[conv] 鏂颁細璇濓紝棣栬疆鍙?%d 瀛楄妭锛坱ools=%d锛?, len(prompt), len(tools))
  	} else {
  		prompt = formatNewTurn(messages[len(messages)-1])
 +		if len(tools) > 0 && !toolPromptOld {
@@ -75,6 +75,15 @@ index 13859ec..2959ba8 100644
 +			}
 +		}
 +
- 		logf("[conv] ?????? turn=%d?????%d ???????????????", conv.turn, len(prompt))
+ 		logf("[conv] 缁帴鍛戒腑 turn=%d锛屽彧鍙?%d 瀛楄妭锛堝巻鍙茬暀鏈嶅姟绔級", conv.turn, len(prompt))
  	}
  
+diff --git "a/C:\\Users\\zifeng\\AppData\\Local\\Temp\\opencode\\orig-4310\\gemini.go" "b/C:\\Users\\zifeng\\AppData\\Local\\Temp\\opencode\\v4310-src\\internal\\app\\gemini.go"
+index e6b6738..3d53413 100644
+--- "a/C:\\Users\\zifeng\\AppData\\Local\\Temp\\opencode\\orig-4310\\gemini.go"
++++ "b/C:\\Users\\zifeng\\AppData\\Local\\Temp\\opencode\\v4310-src\\internal\\app\\gemini.go"
+@@ -169,6 +169,9 @@ var Models = map[string]ModelConfig{
+ 	"gemini-4-hydrogen-thinking": {HexID: hexHydrogen4, Mode: 1, Thinking: true, Upstream: "4 Hydrogen", Desc: "4 Hydrogen with extended thinking (High tier on paid accounts; free accounts get the normal tier); needs a signed-in cookie"},
+ 	// 4 Neon + 鎵╁睍鎬濊€冿細瀹炴祴鍥炴姤 "4 Neon High"锛屾€濊€冮摼璧?[4][0][37][0][0]銆? 	"gemini-4-neon-thinking": {HexID: hexNeon4, Mode: 3, Thinking: true, Upstream: "4 Neon", UpstreamAliases: []string{"3.1 Pro"}, Desc: "4 Neon with extended thinking (High tier); needs a signed-in PAID/Ultra account"},
++	// 鑷淮鎶ゆ墿灞曪細4 Neon Medium 妗ｏ紙think wire=4锛岀収鎼?argon-thinking-medium 鏈哄埗锛夈€?+	// Medium 鎬濊€冨湪鏈嶅姟绔唴閮ㄥ畬鎴愩€佷笉鍚愭€濊€冮摼锛屾晠涓嶈 Thinking銆?+	"gemini-4-neon-thinking-medium": {HexID: hexNeon4, Mode: 3, ThinkWire: thinkingMedium, Upstream: "4 Neon", UpstreamAliases: []string{"3.1 Pro"}, Desc: "4 Neon at the Medium thinking tier (thinks server-side, no reasoning_content); self-maintained extension; needs a signed-in PAID/Ultra account"},
+ 	// 4 Argon + 鎵╁睍鎬濊€冿細Mode=8锛堥€?Argon锛? inner[80]=2锛堜笂娓哥幇鍦ㄦ妸杩欐。鍙?"High"锛夈€? 	// 瀹炴祴鍥炴姤 "4 Argon High" 涓斿甫鎬濊€冮摼锛堢‖棰?985 瀛楃锛岃蛋鏃㈡湁 [4][0][37][0][0] 璺緞锛? 	// 鏃犻渶鏀规娊鍙栦唬鐮侊級鈫?鏄犲皠鎴?reasoning_content銆備粯璐?Ultra 涓撳睘銆?

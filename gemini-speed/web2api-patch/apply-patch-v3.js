@@ -76,4 +76,17 @@ c = c.replace(a3, reminder);
 
 fs.writeFileSync(C, c, "utf8");
 console.log("conversation.go patched (v3)");
+
+// ---------- Patch v3 ext: gemini.go neon medium tier ----------
+const G = "C:/Users/zifeng/AppData/Local/Temp/opencode/v4310-src/internal/app/gemini.go";
+let g = fs.readFileSync(G, "utf8");
+const a4 = '"gemini-4-neon-thinking": {HexID: hexNeon4, Mode: 3, Thinking: true, Upstream: "4 Neon", UpstreamAliases: []string{"3.1 Pro"}, Desc: "4 Neon with extended thinking (High tier); needs a signed-in PAID/Ultra account"},';
+must(g.split(a4).length === 2, "anchor4 (neon-thinking entry) not unique");
+const medium = a4 + "\n" +
+'\t// \u81ea\u7ef4\u62a4\u6269\u5c55\uff1a4 Neon Medium \u6863\uff08think wire=4\uff0c\u7167\u642c argon-thinking-medium \u673a\u5236\uff09\u3002\n' +
+'\t// Medium \u601d\u8003\u5728\u670d\u52a1\u7aef\u5185\u90e8\u5b8c\u6210\u3001\u4e0d\u5410\u601d\u8003\u94fe\uff0c\u6545\u4e0d\u8bbe Thinking\u3002\n' +
+'\t"gemini-4-neon-thinking-medium": {HexID: hexNeon4, Mode: 3, ThinkWire: thinkingMedium, Upstream: "4 Neon", UpstreamAliases: []string{"3.1 Pro"}, Desc: "4 Neon at the Medium thinking tier (thinks server-side, no reasoning_content); self-maintained extension; needs a signed-in PAID/Ultra account"},';
+g = g.replace(a4, medium);
+fs.writeFileSync(G, g, "utf8");
+console.log("gemini.go patched (neon medium tier)");
 console.log("V3-ALL-PATCHES-APPLIED");
